@@ -1,10 +1,7 @@
-/_build
-/cover
-/deps
-/doc
-/.fetch
-erl_crash.dump
-*.ez
-*.beam
-/config/*.secret.exs
-.elixir_ls/
+# Temporary files, for example, from tests.
+/tmp/
+
+# IDE-specific files
+.idea/
+.vscode/
+*.swp
