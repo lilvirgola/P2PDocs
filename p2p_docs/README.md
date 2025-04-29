@@ -1,21 +1,21 @@
-# ProgettoSistemiDistribuiti
+# P2pDocs
 
 **TODO: Add description**
 
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `progetto_sistemi_distribuiti` to your list of dependencies in `mix.exs`:
+by adding `p2p_docs` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:progetto_sistemi_distribuiti, "~> 0.1.0"}
+    {:p2p_docs, "~> 0.1.0"}
   ]
 end
 ```
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/progetto_sistemi_distribuiti](https://hexdocs.pm/progetto_sistemi_distribuiti).
+be found at <https://hexdocs.pm/p2p_docs>.
 
