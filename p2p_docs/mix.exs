@@ -5,7 +5,7 @@ defmodule P2PDocs.MixProject do
     [
       app: :p2p_docs,
       version: "0.1.0",
-      elixir: "~> 1.18",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "P2PDocs",
