@@ -1,0 +1,216 @@
+defmodule OSTree.Node do
+  @moduledoc """
+  Internal node struct for the AVL order-statistics tree.
+  Fields:
+    - `value`: the stored value
+    - `left`: left child (another `OSTree.Node` or `nil`)
+    - `right`: right child (another `OSTree.Node` or `nil`)
+    - `height`: height of this subtree
+    - `size`: number of nodes in this subtree (including self)
+  """
+  defstruct value: nil,
+            left: nil,
+            right: nil,
+            height: 1,
+            size: 1
+end
+
+defmodule OSTree do
+  @moduledoc """
+  An AVL order-statistics tree with custom comparator, supporting
+  insertion, deletion, and k-th smallest element selection in O(log n).
+  """
+  alias __MODULE__, as: OST
+  alias OST.Node
+
+  @type comparator :: (any(), any() -> integer())
+  defstruct comparator: nil, root: nil
+
+  @doc """
+  Create a new, empty order-statistics tree with the given comparator.
+  """
+  @spec new(comparator()) :: %OSTree{}
+  def new(comp) when is_function(comp, 2) do
+    %OST{comparator: comp, root: nil}
+  end
+
+  def tot_size(%OSTree{} = state) do
+    size(state.root)
+  end
+
+  @doc """
+  Insert a value into the tree. Duplicates are ignored.
+  """
+  @spec insert(%OSTree{}, any()) :: %OSTree{}
+  def insert(%OST{comparator: comp, root: root} = tree, value) do
+    %{tree | root: comp_insert(comp, root, value)}
+  end
+
+  @doc """
+  Delete a value from the tree. If absent, no change.
+  """
+  @spec delete(%OSTree{}, any()) :: %OSTree{}
+  def delete(%OST{comparator: comp, root: root} = tree, value) do
+    %{tree | root: comp_delete(comp, root, value)}
+  end
+
+  @doc """
+  Return the k-th smallest element (1-based). Returns `nil` if out of bounds.
+  """
+  @spec kth_element(%OSTree{}, integer()) :: any() | nil
+  def kth_element(%OST{root: root}, k) when is_integer(k) and k > 0 do
+    select(root, k)
+  end
+
+  def kth_element(_, _) do
+    nil
+  end
+
+  # Helpers ---------------------------------------------------------------
+  defp height(nil) do
+    0
+  end
+
+  defp height(%Node{height: h}) do
+    h
+  end
+
+  defp size(nil) do
+    0
+  end
+
+  defp size(%Node{size: s}) do
+    s
+  end
+
+  defp update(node) do
+    %Node{
+      node
+      | height: 1 + max(height(node.left), height(node.right)),
+        size: 1 + size(node.left) + size(node.right)
+    }
+  end
+
+  defp balance_factor(nil) do
+    0
+  end
+
+  defp balance_factor(%Node{} = node) do
+    height(node.left) - height(node.right)
+  end
+
+  defp rotate_right(%Node{left: %Node{} = l} = node) do
+    new_right = %Node{node | left: l.right} |> update()
+    %Node{l | right: new_right} |> update()
+  end
+
+  defp rotate_left(%Node{right: %Node{} = r} = node) do
+    new_left = %Node{node | right: r.left} |> update()
+    %Node{r | left: new_left} |> update()
+  end
+
+  defp rebalance(node) do
+    node = update(node)
+    bf = balance_factor(node)
+
+    cond do
+      bf > 1 and balance_factor(node.left) < 0 ->
+        # Left-Right case
+        %Node{node | left: rotate_left(node.left)} |> rotate_right()
+
+      bf > 1 ->
+        # Left-Left
+        rotate_right(node)
+
+      bf < -1 and balance_factor(node.right) > 0 ->
+        # Right-Left
+        %Node{node | right: rotate_right(node.right)} |> rotate_left()
+
+      bf < -1 ->
+        # Right-Right
+        rotate_left(node)
+
+      true ->
+        node
+    end
+  end
+
+  # Insert with balancing
+  defp comp_insert(_comp, nil, value) do
+    %Node{value: value}
+  end
+
+  defp comp_insert(comp, %Node{value: v, left: l, right: r} = node, value) do
+    case comp.(value, v) do
+      x when x < 0 ->
+        %Node{node | left: comp_insert(comp, l, value)} |> rebalance()
+
+      x when x > 0 ->
+        %Node{node | right: comp_insert(comp, r, value)} |> rebalance()
+
+      _ ->
+        node
+    end
+  end
+
+  # Delete with balancing
+  defp comp_delete(_comp, nil, _value) do
+    nil
+  end
+
+  defp comp_delete(comp, %Node{value: v, left: l, right: r} = node, value) do
+    node =
+      case comp.(value, v) do
+        x when x < 0 ->
+          %Node{node | left: comp_delete(comp, l, value)}
+
+        x when x > 0 ->
+          %Node{node | right: comp_delete(comp, r, value)}
+
+        _ ->
+          cond do
+            l == nil and r == nil ->
+              nil
+
+            l == nil ->
+              r
+
+            r == nil ->
+              l
+
+            true ->
+              succ = min_node(r)
+              %Node{node | value: succ.value, right: comp_delete(comp, r, succ.value)}
+          end
+      end
+
+    if node do
+      rebalance(node)
+    else
+      nil
+    end
+  end
+
+  defp min_node(%Node{left: nil} = node) do
+    node
+  end
+
+  defp min_node(%Node{left: l}) do
+    min_node(l)
+  end
+
+  # k-th smallest selection
+  defp select(nil, _) do
+    nil
+  end
+
+  defp select(%Node{value: v, left: l, right: r}, k) do
+    left_size = size(l)
+
+    cond do
+      k == left_size + 1 -> v
+      k <= left_size -> select(l, k)
+      true -> select(r, k - left_size - 1)
+    end
+  end
+end
