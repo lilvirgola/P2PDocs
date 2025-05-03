@@ -26,11 +26,11 @@ defmodule CrdtTextFastTest do
       Enum.reduce(1..total, state, fn i, st ->
         #sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
         # pick random adjacent pair
-        idx = :rand.uniform(OSTree.tot_size(st.chars) - 1) - 1
+        idx = :rand.uniform(OSTree.get_size(st.chars) - 1)
         CrdtText.insert_local(st, idx, Integer.to_string(i))
       end)
 
-    IO.inspect(CrdtText.get_plain_text(final_state))
+    #IO.inspect(CrdtText.get_plain_text(final_state))
 
     # Collect only real characters (skip sentinels)
     #chars = Enum.filter(final_state.chars, &(&1.value != nil))
@@ -40,8 +40,8 @@ defmodule CrdtTextFastTest do
     #IO.inspect(final_state.chars, charlists: :as_lists)
 
     # Expect exactly `total` inserted chars
-    assert OSTree.tot_size(final_state.chars) == total + 2
-    IO.inspect(OSTree.tot_size(final_state.chars))
+    assert OSTree.get_size(final_state.chars) == total + 2
+    IO.inspect(OSTree.get_size(final_state.chars))
 
     # All IDs unique
     #ids = Enum.map(chars, & &1.id)

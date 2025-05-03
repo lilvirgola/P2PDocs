@@ -34,7 +34,7 @@ defmodule OSTree do
     %OST{comparator: comp, root: nil}
   end
 
-  def tot_size(%OSTree{} = state) do
+  def get_size(%OSTree{} = state) do
     size(state.root)
   end
 
@@ -58,8 +58,8 @@ defmodule OSTree do
   Return the k-th smallest element (1-based). Returns `nil` if out of bounds.
   """
   @spec kth_element(%OSTree{}, integer()) :: any() | nil
-  def kth_element(%OST{root: root}, k) when is_integer(k) and k >= 0 do
-    select(root, k + 1)
+  def kth_element(%OST{root: root}, k) when is_integer(k) and k > 0 do
+    select(root, k)
   end
 
   def kth_element(_, _) do
