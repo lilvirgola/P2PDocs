@@ -26,9 +26,11 @@ defmodule CrdtTextFastTest do
       Enum.reduce(1..total, state, fn i, st ->
         #sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
         # pick random adjacent pair
-        idx = :rand.uniform(OSTree.tot_size(st.chars) - 1)
+        idx = :rand.uniform(OSTree.tot_size(st.chars) - 1) - 1
         CrdtText.insert_local(st, idx, Integer.to_string(i))
       end)
+
+    IO.inspect(CrdtText.get_plain_text(final_state))
 
     # Collect only real characters (skip sentinels)
     #chars = Enum.filter(final_state.chars, &(&1.value != nil))

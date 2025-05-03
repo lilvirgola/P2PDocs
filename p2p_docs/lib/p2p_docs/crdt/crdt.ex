@@ -1,191 +1,211 @@
 defmodule CrdtText do
   @moduledoc """
-  Operation-based CRDT for collaborative text editing using an LSEQ-inspired allocation.
+  Operation-based CRDT for collaborative text editing using an adaptive LSEQ-inspired allocation.
   Supports local and remote insertions and deletions.
   """
 
-  alias __MODULE__, as: CRDT
   alias CustomBroadcast, as: Broadcast
   alias OSTree
 
   @initial_base 32
   @boundary 15
 
-  defstruct [
-    # Ordered list of characters in the document
-    chars: %OSTree{},
-    # Map of id => position of each character
-    pos_by_id: %{},
-    # Map of depth => :plus | :minus allocation strategies
-    strategies: %{},
-    # Unique identifier for this replica
-    peer_id: nil,
-    # Counter for generating unique character IDs
-    counter: 1
-  ]
+  defstruct chars: nil,
+            pos_by_id: %{},
+            strategies: %{},
+            peer_id: nil,
+            counter: 1
 
   @type char_id :: {String.t(), non_neg_integer()}
   @type pos_digit :: {non_neg_integer(), String.t()}
   @type position :: [pos_digit()]
   @type crdt_char :: %{id: char_id(), pos: position(), value: binary()}
-  @type t :: %CRDT{
-          chars: %OSTree{},
-          pos_by_id: Map.t(),
+  @type t :: %__MODULE__{
+          chars: OSTree.t(),
+          pos_by_id: %{optional(char_id()) => position()},
           strategies: %{optional(non_neg_integer()) => :plus | :minus},
           peer_id: String.t(),
           counter: non_neg_integer()
         }
 
   @doc """
-  Initialize a new CRDT state for the given peer, including sentinel boundaries.
+  Create a new CRDT state for `peer_id`, inserting sentinel bounds.
   """
   @spec new(String.t()) :: t()
   def new(peer_id) do
-    begin_marker = %{id: {:__begin__, 0}, pos: [{0, "$"}], value: nil}
-    end_marker = %{id: {:__end__, 0}, pos: [{@initial_base, "$"}], value: nil}
+    [begin_marker, end_marker] = sentinel_markers()
 
-    ostree =
-      OSTree.new(fn %{pos: a}, %{pos: b} ->
-        cond do
-          a == b -> 0
-          a < b -> -1
-          true -> 1
-        end
-      end)
+    tree =
+      OSTree.new(fn a, b -> compare_pos(a.pos, b.pos) end)
+      |> OSTree.insert(begin_marker)
+      |> OSTree.insert(end_marker)
 
-    %CRDT{
-      chars: OSTree.insert(OSTree.insert(ostree, begin_marker), end_marker),
-      pos_by_id: %{{:__begin__, 0} => [{0, "$"}], {:__end__, 0} => [{@initial_base, "$"}]},
+    pos_map = %{
+      begin_marker.id => begin_marker.pos,
+      end_marker.id => end_marker.pos
+    }
+
+    %__MODULE__{
+      chars: tree,
+      pos_by_id: pos_map,
       strategies: %{},
       peer_id: peer_id
     }
   end
 
+  defp sentinel_markers() do
+    [
+      %{id: {:__begin__, 0}, pos: [{0, "$"}], value: nil},
+      %{id: {:__end__, 0}, pos: [{@initial_base, "$"}], value: nil}
+    ]
+  end
+
+  defp compare_pos(a, b) do
+    cond do
+      a == b -> 0
+      a < b -> -1
+      true -> 1
+    end
+  end
+
   @doc """
-  Perform a local insertion of `value` at index `index`, broadcast the operation.
-  Returns the updated state.
+  Locally insert `value` at index, broadcasting to peers.
   """
   @spec insert_local(t(), non_neg_integer(), binary()) :: t()
-  def insert_local(%CRDT{chars: chars} = state, index, value) do
-    left_char =
-      case OSTree.kth_element(chars, index) do
-        nil -> raise ArgumentError, "Index #{index} out of bounds"
-        val -> val
-      end
-
-    right_char =
-      case OSTree.kth_element(chars, index + 1) do
-        nil -> raise ArgumentError, "Index #{index + 1} out of bounds"
-        val -> val
-      end
-
-    allocate_and_insert(state, left_char, right_char, value)
+  def insert_local(state, index, value) do
+    left = get_at!(state, index)
+    right = get_at!(state, index + 1)
+    do_insert(state, left, right, value)
   end
 
-  # Allocates a new position between left_id and right_id, inserts the char, broadcasts it
-  defp allocate_and_insert(
-         %CRDT{} = state,
-         left,
-         right,
-         value
-       ) do
-    left_pos = left.pos
-    right_pos = right.pos
+  defp get_at!(%__MODULE__{chars: chars}, idx) do
+    case OSTree.kth_element(chars, idx) do
+      nil -> raise ArgumentError, "Index #{idx} out of bounds"
+      val -> val
+    end
+  end
 
-    {new_pos, updated_strategies} =
-      allocate_position(left_pos, right_pos, [], 1, state.strategies, state.peer_id)
+  defp do_insert(%__MODULE__{} = state, left, right, value) do
+    {new_pos, strategies} =
+      allocate_position(
+        left.pos,
+        right.pos,
+        state.strategies,
+        state.peer_id
+      )
 
     new_id = {state.peer_id, state.counter}
-    new_char = %{id: new_id, pos: new_pos, value: value}
+    char = %{id: new_id, pos: new_pos, value: value}
 
-    new_chars = OSTree.insert(state.chars, new_char)
-    new_pos_by_id = Map.put(state.pos_by_id, new_id, new_pos)
-
-    unless left_pos < new_pos and new_pos < right_pos do
-      raise "Allocation error: new position does not satisfy intention preservation"
+    # Invariant check
+    unless left.pos < new_pos and new_pos < right.pos do
+      raise "Allocation error: invalid position between #{inspect(left.pos)} and #{inspect(right.pos)}"
     end
 
-    Broadcast.sendMessage(:insert, new_char)
+    Broadcast.sendMessage(:insert, char)
 
-    %CRDT{state | chars: new_chars, counter: state.counter + 1, strategies: updated_strategies, pos_by_id: new_pos_by_id}
+    %__MODULE__{
+      chars: OSTree.insert(state.chars, char),
+      pos_by_id: Map.put(state.pos_by_id, new_id, new_pos),
+      strategies: strategies,
+      counter: state.counter + 1,
+      peer_id: state.peer_id
+    }
   end
 
   @doc """
-  Perform a local deletion at index `index`, broadcast the operation.
-  Returns the updated state.
+  Locally delete element at `index`, broadcasting to peers.
   """
   @spec delete_local(t(), non_neg_integer()) :: t()
-  def delete_local(%CRDT{chars: chars} = state, index) do
-    # Inline get_char_at!
-    target_id =
-      case OSTree.kth_element(chars, index) do
-        nil -> raise ArgumentError, "Index #{index} out of bounds"
-        %{id: id} -> id
-      end
-
-    delete_by_id(state, target_id)
+  def delete_local(%__MODULE__{} = state, index) do
+    %{id: target} = get_at!(state, index)
+    delete_by_id(state, target)
   end
 
-  # Deletes a character by its ID and broadcasts the operation
-  defp delete_by_id(%CRDT{chars: chars, pos_by_id: pos_by_id} = state, target_id) do
+  defp delete_by_id(%__MODULE__{} = state, target_id) do
     Broadcast.sendMessage(:delete, target_id)
-    filtered = OSTree.delete(chars, %{id: target_id, pos: Map.fetch(pos_by_id, target_id), value: nil})
-    %CRDT{state | chars: filtered}
+    pos = Map.fetch!(state.pos_by_id, target_id)
+
+    new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
+
+    state
+    |> put_in([:chars], new_chars)
+    |> update_in([:pos_by_id], &Map.delete(&1, target_id))
+
+    %__MODULE__{state | chars: new_chars, pos_by_id: Map.delete(state.pos_by_id, target_id)}
   end
 
   @doc """
-  Apply a remote insert operation, merging the new char and sorting by position.
+  Merge a remote insert operation.
   """
   @spec apply_remote_insert(t(), crdt_char()) :: t()
-  def apply_remote_insert(%CRDT{chars: chars} = state, char) do
-    new_chars = OSTree.insert(chars, char)
-    %CRDT{state | chars: new_chars}
+  def apply_remote_insert(%__MODULE__{} = state, %{id: id, pos: pos} = char) do
+    unless Map.has_key?(state.pos_by_id, id) do
+      %__MODULE__{
+        state
+        | chars: OSTree.insert(state.chars, char),
+          pos_by_id: Map.put(state.pos_by_id, id, pos)
+      }
+    else
+      state
+    end
   end
 
   @doc """
-  Apply a remote delete operation by removing the char with `target_id`.
+  Merge a remote delete operation.
   """
   @spec apply_remote_delete(t(), char_id()) :: t()
-  def apply_remote_delete(%CRDT{chars: chars, pos_by_id: pos_by_id} = state, target_id) do
-    filtered = OSTree.delete(chars, %{id: target_id, pos: Map.fetch(pos_by_id, target_id), value: nil})
-    %CRDT{state | chars: filtered}
+  def apply_remote_delete(%__MODULE__{} = state, target_id) do
+    pos = Map.fetch!(state.pos_by_id, target_id)
+    new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
+
+    %__MODULE__{
+      state
+      | chars: new_chars,
+        pos_by_id: Map.delete(state.pos_by_id, target_id)
+    }
   end
 
+  @spec get_plain_text(t()) :: [binary()]
+  def get_plain_text(%__MODULE__{chars: chars}) do
+    Enum.map(OSTree.to_list(chars), fn x -> x end)
+  end
+
+
   # -----------------------------------------------------------------------
-  # Internal LSEQ allocation helpers retained for core logic
+  # LSEQ-inspired allocation
   # -----------------------------------------------------------------------
 
-  defp allocate_position(p, q, acc, depth, strategies, peer_id) do
-    {updated_strategies, s} =
+  @spec allocate_position(position(), position(), map(), String.t()) :: {position(), map()}
+  defp allocate_position(p, q, strategies, peer_id) do
+    do_allocate(p, q, [], 1, strategies, peer_id)
+  end
+
+  defp do_allocate(p, q, acc, depth, strategies, peer_id) do
+    {strategies, strat} =
       case Map.fetch(strategies, depth) do
         {:ok, val} ->
           {strategies, val}
 
         :error ->
-          val =
-            if :rand.uniform(2) do
+          new_strat =
+            if :rand.uniform(2) == 1 do
               :plus
             else
               :minus
             end
 
-          {Map.put(strategies, depth, val), val}
+          {Map.put(strategies, depth, new_strat), new_strat}
       end
 
-    {p_head, q_head} = {hd(p), hd(q)}
-    interval = elem(q_head, 0) - elem(p_head, 0)
+    {ph, _} = p_hd = hd(p)
+    {qh, _} = _q_hd = hd(q)
+    interval = qh - ph
 
     cond do
       interval > 1 ->
-        digit =
-          compute_position_digit(
-            elem(p_head, 0),
-            elem(q_head, 0),
-            min(interval - 1, @boundary),
-            s,
-            peer_id
-          )
-
+        step = min(interval - 1, @boundary)
+        digit = compute_digit(ph, qh, step, strat, peer_id)
         {acc ++ [digit], strategies}
 
       interval in [0, 1] ->
@@ -193,26 +213,31 @@ defmodule CrdtText do
 
         next_q =
           if interval == 0 do
-            tl(q) ++ [{base_for(depth + 1), peer_id}]
+            tl(q) ++ [{base(depth + 1), peer_id}]
           else
-            [{base_for(depth + 1), peer_id}]
+            [{base(depth + 1), peer_id}]
           end
 
-        allocate_position(next_p, next_q, acc ++ [p_head], depth + 1, updated_strategies, peer_id)
+        do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, strategies, peer_id)
 
       true ->
         raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
     end
   end
 
-  defp base_for(1), do: @initial_base
-  defp base_for(depth) when depth > 1, do: base_for(depth - 1) * 2
+  defp base(1) do
+    @initial_base
+  end
 
-  defp compute_position_digit(left, _right, step, :plus, peer_id) do
+  defp base(depth) do
+    base(depth - 1) * 2
+  end
+
+  defp compute_digit(left, _, step, :plus, peer_id) do
     {left + :rand.uniform(step), peer_id}
   end
 
-  defp compute_position_digit(_left, right, step, :minus, peer_id) do
+  defp compute_digit(_, right, step, :minus, peer_id) do
     {right - :rand.uniform(step), peer_id}
   end
 end

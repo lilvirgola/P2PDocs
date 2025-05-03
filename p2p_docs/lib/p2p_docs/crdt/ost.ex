@@ -58,12 +58,17 @@ defmodule OSTree do
   Return the k-th smallest element (1-based). Returns `nil` if out of bounds.
   """
   @spec kth_element(%OSTree{}, integer()) :: any() | nil
-  def kth_element(%OST{root: root}, k) when is_integer(k) and k > 0 do
-    select(root, k)
+  def kth_element(%OST{root: root}, k) when is_integer(k) and k >= 0 do
+    select(root, k + 1)
   end
 
   def kth_element(_, _) do
     nil
+  end
+
+  @spec to_list(%OSTree{}) :: [any()]
+  def to_list(%OSTree{root: root}) do
+    inorder(root)
   end
 
   # Helpers ---------------------------------------------------------------
@@ -213,4 +218,14 @@ defmodule OSTree do
       true -> select(r, k - left_size - 1)
     end
   end
+  defp inorder(nil) do
+    []
+  end
+  
+  defp inorder(%Node{left: l, right: r} = node) do
+    inorder(l) ++ [node.value] ++ inorder(r)
+  end
 end
+
+
+
