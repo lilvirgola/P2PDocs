@@ -52,32 +52,25 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   """
   @spec compare(t(), t()) :: :before | :after | :concurrent | :equal #we want to return one of these four values
   def compare(clock1, clock2) do
-    all_processes = MapSet.union(MapSet.new(Map.keys(clock1)), MapSet.new(Map.keys(clock2))) #get all unique processes from both clocks
+    all_processes = MapSet.union(MapSet.new(Map.keys(clock1)), MapSet.new(Map.keys(clock2)))
 
-    #initialize comparison flags
-    results =
-      Enum.reduce(all_processes, %{less: false, greater: false, equal: true}, fn process, acc -> #for the process in both the clock, get its value (default to 0 if it doesn't exist) and compare them
+    Enum.reduce_while(all_processes, %{less: false, greater: false}, fn process, acc ->
+      v1 = Map.get(clock1, process, 0)
+      v2 = Map.get(clock2, process, 0)
 
-        v1 = Map.get(clock1, process, 0)
-        v2 = Map.get(clock2, process, 0)
+      new_acc = %{
+        less: acc.less || v1 < v2,
+        greater: acc.greater || v1 > v2
+      }
 
-        %{
-          less: acc.less || v1 < v2,
-          greater: acc.greater || v1 > v2,
-          equal: acc.equal && v1 == v2
-        }
-      end)
-    # Determine the relationship based on the flags
-    # If both less and greater are true, they are concurrent
-    # If equal is true, they are equal
-    # If less is true and greater is false, clock1 is before clock2
-    # If greater is true and less is false, clock1 is after clock2
-    # If both less and greater are false, they are concurrent
-    cond do
-      results.equal -> :equal
-      !results.greater -> :before
-      !results.less -> :after
-      true -> :concurrent
+      if new_acc.less && new_acc.greater, do: {:halt, :concurrent}, else: {:cont, new_acc} #if both less and greater are true, we can stop checking
+    end)
+    |> case do
+      :concurrent -> :concurrent
+      %{less: false, greater: false} -> :equal
+      %{less: true, greater: false} -> :before
+      %{less: false, greater: true} -> :after
+      _ -> :concurrent
     end
   end
 

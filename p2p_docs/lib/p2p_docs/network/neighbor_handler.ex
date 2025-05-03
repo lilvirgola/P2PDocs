@@ -294,7 +294,6 @@ defmodule P2PDocs.Network.NeighborHandler do
   # @doc """
   # Handles malformed packets that do not match the expected format.
   # returns an error.
-
   defp decode_heartbeat(_malformed, _secret), do: :error
 
   # @doc """
