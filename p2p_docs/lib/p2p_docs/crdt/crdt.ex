@@ -4,8 +4,12 @@ defmodule CrdtText do
   Supports local and remote insertions and deletions.
   """
 
+  use Bitwise
+
   alias CustomBroadcast, as: Broadcast
   alias OSTree
+
+  alias __MODULE__, as: CRDT
 
   @initial_base 32
   @boundary 15
@@ -20,7 +24,7 @@ defmodule CrdtText do
   @type pos_digit :: {non_neg_integer(), String.t()}
   @type position :: [pos_digit()]
   @type crdt_char :: %{id: char_id(), pos: position(), value: binary()}
-  @type t :: %__MODULE__{
+  @type t :: %CRDT{
           chars: OSTree.t(),
           pos_by_id: %{optional(char_id()) => position()},
           strategies: %{optional(non_neg_integer()) => :plus | :minus},
@@ -29,7 +33,7 @@ defmodule CrdtText do
         }
 
   @doc """
-  Create a new CRDT state for `peer_id`, inserting sentinel bounds.
+  Create a new CRDT state for 'peer_id', inserting sentinel bounds.
   """
   @spec new(String.t()) :: t()
   def new(peer_id) do
@@ -45,7 +49,7 @@ defmodule CrdtText do
       end_marker.id => end_marker.pos
     }
 
-    %__MODULE__{
+    %CRDT{
       chars: tree,
       pos_by_id: pos_map,
       strategies: %{},
@@ -69,7 +73,7 @@ defmodule CrdtText do
   end
 
   @doc """
-  Locally insert `value` at index, broadcasting to peers.
+  Locally insert 'value' at index, broadcasting to peers.
   """
   @spec insert_local(t(), non_neg_integer(), binary()) :: t()
   def insert_local(state, index, value) do
@@ -78,14 +82,14 @@ defmodule CrdtText do
     do_insert(state, left, right, value)
   end
 
-  defp get_at!(%__MODULE__{chars: chars}, idx) do
+  defp get_at!(%CRDT{chars: chars}, idx) do
     case OSTree.kth_element(chars, idx) do
       nil -> raise ArgumentError, "Index #{idx} out of bounds"
       val -> val
     end
   end
 
-  defp do_insert(%__MODULE__{} = state, left, right, value) do
+  defp do_insert(%CRDT{} = state, left, right, value) do
     {new_pos, strategies} =
       allocate_position(
         left.pos,
@@ -99,12 +103,13 @@ defmodule CrdtText do
 
     # Invariant check
     unless left.pos < new_pos and new_pos < right.pos do
-      raise "Allocation error: invalid position between #{inspect(left.pos)} and #{inspect(right.pos)}"
+      raise "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
+              " and #{inspect(right.pos)} does not satisfy intention preservation"
     end
 
     Broadcast.sendMessage(:insert, char)
 
-    %__MODULE__{
+    %CRDT{
       chars: OSTree.insert(state.chars, char),
       pos_by_id: Map.put(state.pos_by_id, new_id, new_pos),
       strategies: strategies,
@@ -114,34 +119,24 @@ defmodule CrdtText do
   end
 
   @doc """
-  Locally delete element at `index`, broadcasting to peers.
+  Locally delete element at 'index', broadcasting to peers.
   """
   @spec delete_local(t(), non_neg_integer()) :: t()
-  def delete_local(%__MODULE__{} = state, index) do
-    %{id: target} = get_at!(state, index)
-    delete_by_id(state, target)
-  end
+  def delete_local(%CRDT{} = state, index) do
+    char = get_at!(state, index)
 
-  defp delete_by_id(%__MODULE__{} = state, target_id) do
-    Broadcast.sendMessage(:delete, target_id)
-    pos = Map.fetch!(state.pos_by_id, target_id)
+    new_chars = OSTree.delete(state.chars, char)
 
-    new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
-
-    state
-    |> put_in([:chars], new_chars)
-    |> update_in([:pos_by_id], &Map.delete(&1, target_id))
-
-    %__MODULE__{state | chars: new_chars, pos_by_id: Map.delete(state.pos_by_id, target_id)}
+    %CRDT{state | chars: new_chars, pos_by_id: Map.delete(state.pos_by_id, char.id)}
   end
 
   @doc """
   Merge a remote insert operation.
   """
   @spec apply_remote_insert(t(), crdt_char()) :: t()
-  def apply_remote_insert(%__MODULE__{} = state, %{id: id, pos: pos} = char) do
+  def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
     unless Map.has_key?(state.pos_by_id, id) do
-      %__MODULE__{
+      %CRDT{
         state
         | chars: OSTree.insert(state.chars, char),
           pos_by_id: Map.put(state.pos_by_id, id, pos)
@@ -155,11 +150,13 @@ defmodule CrdtText do
   Merge a remote delete operation.
   """
   @spec apply_remote_delete(t(), char_id()) :: t()
-  def apply_remote_delete(%__MODULE__{} = state, target_id) do
+  def apply_remote_delete(%CRDT{} = state, target_id) do
     pos = Map.fetch!(state.pos_by_id, target_id)
+
+    # id and value are not used by comparator, so they are not needed for delete
     new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
 
-    %__MODULE__{
+    %CRDT{
       state
       | chars: new_chars,
         pos_by_id: Map.delete(state.pos_by_id, target_id)
@@ -167,10 +164,9 @@ defmodule CrdtText do
   end
 
   @spec get_plain_text(t()) :: [binary()]
-  def get_plain_text(%__MODULE__{chars: chars}) do
-    Enum.map(OSTree.to_list(chars), fn x -> x end)
+  def get_plain_text(%CRDT{chars: chars}) do
+    Enum.map(OSTree.to_list(chars), fn x -> x.value end)
   end
-
 
   # -----------------------------------------------------------------------
   # LSEQ-inspired allocation
@@ -182,21 +178,7 @@ defmodule CrdtText do
   end
 
   defp do_allocate(p, q, acc, depth, strategies, peer_id) do
-    {strategies, strat} =
-      case Map.fetch(strategies, depth) do
-        {:ok, val} ->
-          {strategies, val}
-
-        :error ->
-          new_strat =
-            if :rand.uniform(2) == 1 do
-              :plus
-            else
-              :minus
-            end
-
-          {Map.put(strategies, depth, new_strat), new_strat}
-      end
+    {upd_strategies, strat} = get_and_update_strategy(strategies, depth)
 
     {ph, _} = p_hd = hd(p)
     {qh, _} = _q_hd = hd(q)
@@ -206,7 +188,7 @@ defmodule CrdtText do
       interval > 1 ->
         step = min(interval - 1, @boundary)
         digit = compute_digit(ph, qh, step, strat, peer_id)
-        {acc ++ [digit], strategies}
+        {acc ++ [digit], upd_strategies}
 
       interval in [0, 1] ->
         next_p = tl(p) ++ [{0, peer_id}]
@@ -218,19 +200,32 @@ defmodule CrdtText do
             [{base(depth + 1), peer_id}]
           end
 
-        do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, strategies, peer_id)
+        do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, upd_strategies, peer_id)
 
       true ->
         raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
     end
   end
 
-  defp base(1) do
-    @initial_base
+  defp get_and_update_strategy(strategies, depth) do
+    case Map.fetch(strategies, depth) do
+      {:ok, val} ->
+        {strategies, val}
+
+      :error ->
+        new_strat =
+          if :rand.uniform(2) == 1 do
+            :plus
+          else
+            :minus
+          end
+
+        {Map.put(strategies, depth, new_strat), new_strat}
+    end
   end
 
   defp base(depth) do
-    base(depth - 1) * 2
+    @initial_base <<< (depth - 1)
   end
 
   defp compute_digit(left, _, step, :plus, peer_id) do

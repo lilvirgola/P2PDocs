@@ -2,11 +2,11 @@ defmodule OSTree.Node do
   @moduledoc """
   Internal node struct for the AVL order-statistics tree.
   Fields:
-    - `value`: the stored value
-    - `left`: left child (another `OSTree.Node` or `nil`)
-    - `right`: right child (another `OSTree.Node` or `nil`)
-    - `height`: height of this subtree
-    - `size`: number of nodes in this subtree (including self)
+    - 'value': the stored value
+    - 'left': left child (another 'OSTree.Node' or 'nil')
+    - 'right': right child (another 'OSTree.Node' or 'nil')
+    - 'height': height of this subtree
+    - 'size': number of nodes in this subtree (including self)
   """
   defstruct value: nil,
             left: nil,
@@ -34,8 +34,20 @@ defmodule OSTree do
     %OST{comparator: comp, root: nil}
   end
 
+  @doc """
+  Get size of the tree.
+  """
+  @spec get_size(%OSTree{}) :: non_neg_integer()
   def get_size(%OSTree{} = state) do
     size(state.root)
+  end
+
+  @doc """
+  Get height of the tree.
+  """
+  @spec get_height(%OSTree{}) :: non_neg_integer()
+  def get_height(%OSTree{} = state) do
+    height(state.root)
   end
 
   @doc """
@@ -55,7 +67,7 @@ defmodule OSTree do
   end
 
   @doc """
-  Return the k-th smallest element (1-based). Returns `nil` if out of bounds.
+  Return the k-th smallest element (1-based). Returns 'nil' if out of bounds.
   """
   @spec kth_element(%OSTree{}, integer()) :: any() | nil
   def kth_element(%OST{root: root}, k) when is_integer(k) and k > 0 do
