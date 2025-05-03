@@ -1,21 +1,29 @@
-# P2pDocs
+# P2P_Docs
 
-**TODO: Add description**
+## Quick Start
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `p2p_docs` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:p2p_docs, "~> 0.1.0"}
-  ]
-end
+### 1. Clone & Setup
+```bash
+git clone https://github.com/your-repo/p2p_docs.git
+cd p2p_docs
+mix deps.get
+```
+### 2. Start Nodes
+Open separate terminals:
+Terminal 1 (Node 1)
+```bash
+iex --name node1@127.0.0.1 -S mix
+```
+Terminal 2 (Node 2)
+```bash
+iex --name node2@127.0.0.1 -S mix
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/p2p_docs>.
+The neighbor handler and causalbrodcast modules both start automatically with the supervisor on the P2PDocs.Application module
 
+### 3. Send a broadcast message (for testing)
+just write
+```elixir
+P2PDocs.Network.CausalBroadcast.broadcast("message")
+```
+message can be any type, r
