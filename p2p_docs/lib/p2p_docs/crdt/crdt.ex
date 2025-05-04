@@ -171,7 +171,6 @@ defmodule CrdtText do
     Enum.map(OSTree.to_list(chars), fn x -> x end)
   end
 
-
   # -----------------------------------------------------------------------
   # LSEQ-inspired allocation
   # -----------------------------------------------------------------------

@@ -4,7 +4,7 @@
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/your-repo/p2p_docs.git
+git clone https://github.com/lilvirgola/ProgettoSistemiDistribuiti.git
 cd p2p_docs
 mix deps.get
 ```

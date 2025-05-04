@@ -28,11 +28,16 @@ defmodule P2PDocs.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:plug_cowboy, "~> 2.6"}, # for API server
-      {:jason, "~> 1.4"}, # for JSON parsing
-      {:ranch, "~> 2.0"}, # Socket acceptor pool
-      {:socket, "~> 0.3"}, # Raw UDP socket support
-      {:ex_doc, "~> 0.30", only: :dev, runtime: false} # for documentation generation
+      # for API server
+      {:plug_cowboy, "~> 2.6"},
+      # for JSON parsing
+      {:jason, "~> 1.4"},
+      # Socket acceptor pool
+      {:ranch, "~> 2.0"},
+      # Raw UDP socket support
+      {:socket, "~> 0.3"},
+      # for documentation generation
+      {:ex_doc, "~> 0.30", only: :dev, runtime: false}
     ]
   end
 end

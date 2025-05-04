@@ -1,7 +1,9 @@
 defmodule P2PDocs.Network.CausalBroadcast do
   use GenServer
-  alias P2PDocs.Network.NaiveVectorClock, as: VectorClock # this can be replaced with a more efficient implementation later
+  # this can be replaced with a more efficient implementation later
+  alias P2PDocs.Network.NaiveVectorClock, as: VectorClock
   require Logger
+
   @moduledoc """
   This module implements our causal broadcast protocol using vector clocks.
   """
@@ -14,10 +16,14 @@ defmodule P2PDocs.Network.CausalBroadcast do
     defstruct [
       :my_id,
       :nodes,
-      t: %{}, # Vector clock
-      d: %{}, # Delivery counters
-      buffer: MapSet.new(), # Pending messages
-      delivery_pid: nil # Where to send delivery notifications (added for the tests)
+      # Vector clock
+      t: %{},
+      # Delivery counters
+      d: %{},
+      # Pending messages
+      buffer: MapSet.new(),
+      # Where to send delivery notifications (added for the tests)
+      delivery_pid: nil
     ]
   end
 
@@ -65,22 +71,30 @@ defmodule P2PDocs.Network.CausalBroadcast do
   Initializes the CausalBroadcast server with the given options.
   The options should include `:my_id` (the ID of the current node) and `:nodes` (a list of known nodes).
   """
-  @impl true # --> indicates that this function is an implementation of a callback defined in the GenServer behaviour more or less like @override in java
+  # --> indicates that this function is an implementation of a callback defined in the GenServer behaviour more or less like @override in java
+  @impl true
   def init(opts) do
     my_id = Keyword.fetch!(opts, :my_id)
     initial_nodes = Keyword.get(opts, :nodes, [my_id]) |> Enum.uniq()
     # Subscribe to neighbor events
     :ok = P2PDocs.Network.NeighborHandler.subscribe(self())
     # Initialize the state with the given options
-    {:ok, %State{
-      my_id: my_id, # Our node ID
-      nodes: initial_nodes,
-      t: VectorClock.new(my_id), # Our vector clock (t)
-      d: VectorClock.new(), # Delivery counters (d) as VectorClock
-      buffer: MapSet.new(), # Pending messages
-      delivery_pid: Keyword.get(opts, :delivery_pid, self()) # Where to send delivery notifications (added for the tests)
-    }}
+    {:ok,
+     %State{
+       # Our node ID
+       my_id: my_id,
+       nodes: initial_nodes,
+       # Our vector clock (t)
+       t: VectorClock.new(my_id),
+       # Delivery counters (d) as VectorClock
+       d: VectorClock.new(),
+       # Pending messages
+       buffer: MapSet.new(),
+       # Where to send delivery notifications (added for the tests)
+       delivery_pid: Keyword.get(opts, :delivery_pid, self())
+     }}
   end
+
   # Handle info messages from the neighbor handler part
 
   @doc """
@@ -123,7 +137,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   @impl true
   def handle_cast({:message, msg, id, t_prime}, state) do
-    Logger.debug("[#{node()}] RECEIVED #{inspect(msg)} from #{inspect(id)} with VC: #{inspect(t_prime)}")
+    Logger.debug(
+      "[#{node()}] RECEIVED #{inspect(msg)} from #{inspect(id)} with VC: #{inspect(t_prime)}"
+    )
+
     new_t = VectorClock.merge(state.t, t_prime)
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
@@ -132,31 +149,32 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(msg)
-      Logger.info("[#{node()}] DELIVERED #{inspect(delivered_msg)} from #{inspect(delivered_id)} with VC: #{inspect(delivered_t)}")
+
+      Logger.info(
+        "[#{node()}] DELIVERED #{inspect(delivered_msg)} from #{inspect(delivered_id)} with VC: #{inspect(delivered_t)}"
+      )
     end
 
-    {:noreply, %{
-      state |
-      t: new_t,
-      d: new_d,
-      buffer: remaining_buffer
-    }}
+    {:noreply,
+     %{
+       state
+       | t: new_t,
+         d: new_d,
+         buffer: remaining_buffer
+     }}
   end
 
   @impl true
   def handle_cast({:add_node, new_node}, state) do
     if new_node in state.nodes do
-      {:noreply, state}  # Already exists
+      # Already exists
+      {:noreply, state}
     else
       # Initialize clocks for new node WITHOUT incrementing
       new_t = VectorClock.merge(state.t, VectorClock.new(new_node))
       new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
 
-      {:noreply, %{state |
-        nodes: [new_node | state.nodes],
-        t: new_t,
-        d: new_d
-      }}
+      {:noreply, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
     end
   end
 
@@ -164,10 +182,13 @@ defmodule P2PDocs.Network.CausalBroadcast do
   @impl true
   def handle_cast({:remove_node, old_node}, state) do
     if old_node in state.nodes do
-      {:noreply, %{state |
-        nodes: List.delete(state.nodes, old_node),
-        d: VectorClock.merge(state.d, VectorClock.new(old_node)) # Reset delivery counter for removed node? ## TODO: Check if this is correct
-      }}
+      {:noreply,
+       %{
+         state
+         | nodes: List.delete(state.nodes, old_node),
+           # Reset delivery counter for removed node? ## TODO: Check if this is correct
+           d: VectorClock.merge(state.d, VectorClock.new(old_node))
+       }}
     else
       {:noreply, state}
     end
@@ -180,11 +201,12 @@ defmodule P2PDocs.Network.CausalBroadcast do
   """
   @impl true
   def handle_call(:get_state, _from, state) do
-    {:reply, %{
-      vector_clock: state.t,
-      delivery_counters: state.d,
-      pending_messages: state.buffer
-    }, state}
+    {:reply,
+     %{
+       vector_clock: state.t,
+       delivery_counters: state.d,
+       pending_messages: state.buffer
+     }, state}
   end
 
   # Private helper functions
@@ -193,44 +215,48 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # This function checks if the messages in the buffer can be delivered based on the vector clocks and the current state.
 
   # """
-  defp attempt_deliveries(buffer, d, current_t, my_id) do # TODO: Check if this is correct, should be, like in the slides, but idk
+  # TODO: Check if this is correct, should be, like in the slides, but idk
+  defp attempt_deliveries(buffer, d, current_t, my_id) do
     # For each message in the buffer, check if it can be delivered
-    Enum.reduce(buffer, {[], buffer, d}, fn {msg, sender_id, t_prime}, {delivered, remaining, d_acc} ->
+    Enum.reduce(buffer, {[], buffer, d}, fn {msg, sender_id, t_prime},
+                                            {delivered, remaining, d_acc} ->
       cond do
         # Case 1: Message is from myself - deliver immediately
         sender_id == my_id ->
           new_d = VectorClock.increment(d_acc, my_id)
-          {[{msg, sender_id, t_prime} | delivered],
-           MapSet.delete(remaining, {msg, sender_id, t_prime}),
-           new_d}
 
+          {[{msg, sender_id, t_prime} | delivered],
+           MapSet.delete(remaining, {msg, sender_id, t_prime}), new_d}
 
         # Case 2: Message passes causal delivery condition
         deliverable?(t_prime, sender_id, d_acc, current_t) ->
           new_d = VectorClock.increment(d_acc, sender_id)
+
           {[{msg, sender_id, t_prime} | delivered],
-           MapSet.delete(remaining, {msg, sender_id, t_prime}),
-           new_d}
+           MapSet.delete(remaining, {msg, sender_id, t_prime}), new_d}
 
         # Case 3: Not deliverable yet
         true ->
           {delivered, remaining, d_acc}
       end
     end)
-
   end
 
   # @doc """
   # Checks if a message can be delivered based on the causal delivery conditions.
   # This function checks if the message's vector clock is less than or equal to the current vector clock and the delivery counter.
   # """
-  defp deliverable?(t_prime, sender_id, d, current_t) do # TODO: Check if this is correct, same as above
+  # TODO: Check if this is correct, same as above
+  defp deliverable?(t_prime, sender_id, d, current_t) do
     # Check if t_prime <= current_t (message is within our known timeline)
-    time_ok = VectorClock.before?(t_prime, current_t) or VectorClock.concurrent?(t_prime, current_t)
+    time_ok =
+      VectorClock.before?(t_prime, current_t) or VectorClock.concurrent?(t_prime, current_t)
 
     # Check if t_prime <= d' = d[sender_id] + 1
     d_prime = VectorClock.increment(d, sender_id)
-    counter_ok = VectorClock.before?(t_prime, d_prime) or VectorClock.concurrent?(t_prime, d_prime)
+
+    counter_ok =
+      VectorClock.before?(t_prime, d_prime) or VectorClock.concurrent?(t_prime, d_prime)
 
     time_ok and counter_ok
   end

@@ -1,13 +1,13 @@
 defmodule P2PDocs.API.Router do
   use Plug.Router
+
   @moduledoc """
   In this module, we define the API routes for the P2PDocs application.
   The API allows for the retrieval and storage of documents using a simple HTTP interface.
   """
 
-  plug :match
-  plug :dispatch
-
+  plug(:match)
+  plug(:dispatch)
 
   # @doc """
   # This route handles GET requests to retrieve a document by its ID.
@@ -16,6 +16,7 @@ defmodule P2PDocs.API.Router do
     id = conn.params["id"]
     send_resp(conn, 200, Jason.encode!(id || %{}))
   end
+
   # @doc """
   # This route handles POST requests to store a document.
   # It expects a JSON body containing the document data.

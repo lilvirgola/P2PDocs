@@ -9,7 +9,7 @@ defmodule P2PDocs do
 
   ## Examples
 
-      iex> P2pDocs.hello()
+      iex> P2PDocs.hello()
       :world
 
   """

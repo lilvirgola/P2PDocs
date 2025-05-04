@@ -8,7 +8,8 @@ defmodule P2PDocs.API.Server do
     Plug.Cowboy.child_spec(
       scheme: :http,
       plug: P2PDocs.API.Router,
-      options: [port: Application.get_env(:p2p_docs, __MODULE__)[:port] || 4000] # Default port
+      # Default port
+      options: [port: Application.get_env(:p2p_docs, __MODULE__)[:port] || 4000]
     )
   end
 end
