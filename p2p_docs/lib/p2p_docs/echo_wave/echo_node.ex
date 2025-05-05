@@ -4,7 +4,6 @@ defmodule EchoWave.EchoNode do
   defstruct id: nil,
             neighbors: nil,
             parent: nil,
-            to_be_sent: nil,
             to_be_received: nil,
             count: 0
 
@@ -18,7 +17,6 @@ defmodule EchoWave.EchoNode do
     state = %__MODULE__{
       id: id,
       neighbors: neighbors,
-      to_be_sent: neighbors,
       to_be_received: neighbors
     }
 
@@ -37,7 +35,6 @@ defmodule EchoWave.EchoNode do
     new_state = %__MODULE__{
       state
       | parent: from,
-        to_be_sent: nil,
         to_be_received: neighbors_except_parent,
         count: count + 1
     }
@@ -45,7 +42,7 @@ defmodule EchoWave.EchoNode do
     {:noreply, new_state}
   end
 
-  def handle_cast({:token, from, count}, %__MODULE__{to_be_sent: nil} = state) do
+  def handle_cast({:token, from, count}, state) do
     IO.puts("Node #{state.id} received token from #{inspect(from)}")
 
     new_to_be_received = state.to_be_received -- [from]
