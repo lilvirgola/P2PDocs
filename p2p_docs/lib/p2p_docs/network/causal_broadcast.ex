@@ -144,8 +144,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.merge(state.t, t_prime)
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
-    {delivered, remaining_buffer, new_d} =
-      attempt_deliveries(new_buffer, state.d, new_t, id, [])
+    {delivered, remaining_buffer, new_d} = attempt_deliveries(new_buffer, state.d, id, [])
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(msg)
@@ -214,16 +213,22 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   # """
   # TODO: Check if this is correct, should be, like in the slides, but idk
-  defp attempt_deliveries(buffer, d, current_t, my_id, delivered) do
+  defp attempt_deliveries(buffer, d, my_id, delivered) do
     # For each message in the buffer, check if it can be delivered
-    deliverable = Enum.find(buffer, fn {_msg, sender_id, t_prime} -> deliverable?(t_prime, sender_id, d, current_t) end)
+    deliverable =
+      Enum.find(buffer, fn {_msg, sender_id, t_prime} -> deliverable?(t_prime, sender_id, d) end)
+
     case deliverable do
-    nil -> {delivered, buffer, d}
-    {_msg, sender_id, _t_prime} = found -> 
-      new_d = VectorClock.increment(d, sender_id)
-      attempt_deliveries(MapSet.delete(buffer, found), new_d, current_t, my_id, [found | delivered])
-    _ -> raise "ERROR: invalid element in buffer!"
-      end
+      nil ->
+        {delivered, buffer, d}
+
+      {_msg, sender_id, _t_prime} = found ->
+        new_d = VectorClock.increment(d, sender_id)
+        attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, [found | delivered])
+
+      _ ->
+        raise "ERROR: invalid element in buffer!"
+    end
   end
 
   # @doc """
@@ -231,12 +236,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # This function checks if the message's vector clock is less than or equal to the current vector clock and the delivery counter.
   # """
   # TODO: Check if this is correct, same as above
-  defp deliverable?(t_prime, sender_id, d, current_t) do
+  defp deliverable?(t_prime, sender_id, d) do
     # Check if t_prime <= d' = d[sender_id] + 1
     d_prime = VectorClock.increment(d, sender_id)
-    
-    VectorClock.before?(t_prime, d_prime) or VectorClock.equal?(t_prime, d_prime)
 
+    VectorClock.before?(t_prime, d_prime) or VectorClock.equal?(t_prime, d_prime)
   end
 
   # @doc """
