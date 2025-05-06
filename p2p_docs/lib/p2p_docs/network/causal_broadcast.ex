@@ -145,7 +145,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
     {delivered, remaining_buffer, new_d} =
-      attempt_deliveries(new_buffer, state.d, new_t, id,[])
+      attempt_deliveries(new_buffer, state.d, new_t, id, [])
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(msg)
@@ -219,9 +219,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
     deliverable = Enum.find(buffer, fn {_msg, sender_id, t_prime} -> deliverable?(t_prime, sender_id, d, current_t) end)
     case deliverable do
     nil -> {delivered, buffer, d}
-    found -> 
-      new_d = VectorClock.increment(d, elem(found,2))
+    {_msg, sender_id, _t_prime} = found -> 
+      new_d = VectorClock.increment(d, sender_id)
       attempt_deliveries(MapSet.delete(buffer, found), new_d, current_t, my_id, [found | delivered])
+    _ -> raise "ERROR: invalid element in buffer!"
       end
   end
 
@@ -231,17 +232,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # """
   # TODO: Check if this is correct, same as above
   defp deliverable?(t_prime, sender_id, d, current_t) do
-    # Check if t_prime <= current_t (message is within our known timeline)
-    time_ok =
-      VectorClock.before?(t_prime, current_t) or VectorClock.concurrent?(t_prime, current_t)
-
     # Check if t_prime <= d' = d[sender_id] + 1
     d_prime = VectorClock.increment(d, sender_id)
+    
+    VectorClock.before?(t_prime, d_prime) or VectorClock.equal?(t_prime, d_prime)
 
-    counter_ok =
-      VectorClock.before?(t_prime, d_prime) or VectorClock.concurrent?(t_prime, d_prime)
-
-    time_ok and counter_ok
   end
 
   # @doc """

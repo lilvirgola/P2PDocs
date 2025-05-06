@@ -105,4 +105,9 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   def concurrent?(clock1, clock2) do
     compare(clock1, clock2) == :concurrent
   end
+
+  @spec equal?(t(), t()) :: boolean()
+  def equal?(clock1, clock2) do
+    compare(clock1, clock2) == :equal
+  end
 end

@@ -4,7 +4,7 @@ defmodule CrdtText do
   Supports local and remote insertions and deletions.
   """
 
-  use Bitwise
+  import Bitwise
 
   alias CustomBroadcast, as: Broadcast
   alias OSTree
