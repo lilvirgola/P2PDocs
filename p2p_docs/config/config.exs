@@ -12,10 +12,7 @@ config(:p2p_docs, P2PDocs.Network.NeighborHandler,
   ttl: 4,
   interval: 5_000,
   secret: "default"
-
 )
 
 # API server configuration
-config(:p2p_docs, P2PDocs.API.Server,
-  port: 4000
-)
+config(:p2p_docs, P2PDocs.API.Server, port: 4000)

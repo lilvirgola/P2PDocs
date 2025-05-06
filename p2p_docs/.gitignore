@@ -21,3 +21,6 @@ p2p_docs-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Graphviz graph encodings
+*.dot

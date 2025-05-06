@@ -72,14 +72,14 @@ defmodule CrdtTextBasic do
   defp local_insert_via_id(%State{} = state, left_id, right_id, value) do
     p = pos_for(state.chars, left_id)
     q = pos_for(state.chars, right_id)
-    #IO.inspect(p)
-    #IO.inspect(q)
+    # IO.inspect(p)
+    # IO.inspect(q)
     {new_pos, strat_map2} = alloc(p, q, [], 1, state.strategy_map, state.peer_id)
 
     id = {state.peer_id, state.counter}
     new_char = %{id: id, pos: new_pos, value: value}
     new_chars = (state.chars ++ [new_char]) |> Enum.sort_by(fn x -> {x.pos, x.id} end)
-    #IO.inspect(new_pos)
+    # IO.inspect(new_pos)
     if not (p < new_pos and new_pos < q) do
       raise "ERROR: generated position do not repsect intention preservation!"
     end
@@ -170,9 +170,9 @@ defmodule CrdtTextBasic do
           {Map.put(strategies, depth, val), val}
       end
 
-    head_p =hd(p)
+    head_p = hd(p)
 
-    head_q =hd(q)
+    head_q = hd(q)
 
     case elem(head_q, 0) - elem(head_p, 0) do
       x when x > 1 ->
@@ -180,11 +180,27 @@ defmodule CrdtTextBasic do
 
       x when x == 1 ->
         updated_pos = new_pos ++ [head_p]
-        alloc(tl(p ++ [{0,peer_id}]), [{base_at_depth(depth+1), peer_id}], updated_pos, depth + 1, strategies2, peer_id)
+
+        alloc(
+          tl(p ++ [{0, peer_id}]),
+          [{base_at_depth(depth + 1), peer_id}],
+          updated_pos,
+          depth + 1,
+          strategies2,
+          peer_id
+        )
 
       x when x == 0 ->
         updated_pos = new_pos ++ [head_p]
-        alloc(tl(p ++ [{0,peer_id}]), tl(q ++ [{base_at_depth(depth+1),peer_id}]), updated_pos, depth + 1, strategies2, peer_id)
+
+        alloc(
+          tl(p ++ [{0, peer_id}]),
+          tl(q ++ [{base_at_depth(depth + 1), peer_id}]),
+          updated_pos,
+          depth + 1,
+          strategies2,
+          peer_id
+        )
 
       _x ->
         raise "ERROR: illegal boundaries!"
@@ -201,7 +217,8 @@ defmodule CrdtTextBasic do
   end
 
   defp compute_digit(left_digit, right_digit, strategy, peer_id) do
-    step = min((right_digit - left_digit - 1), @boundary)
+    step = min(right_digit - left_digit - 1, @boundary)
+
     case strategy do
       :plus -> {:rand.uniform(step) + left_digit, peer_id}
       :minus -> {right_digit - :rand.uniform(step), peer_id}

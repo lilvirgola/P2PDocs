@@ -9,12 +9,14 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   A vector clock is represented as a map where the keys are process ID
   and the values are integers representing the event count for that process
   """
-  @type t :: %{required(any()) => non_neg_integer()} #map something (in our case a process ID) to a non neg event count
+  # map something (in our case a process ID) to a non neg event count
+  @type t :: %{required(any()) => non_neg_integer()}
 
   @doc """
   Creates a new empty vector clock
   """
-  @spec new() :: t() #-->this is a type spec, it tells us what the function returns, like in haskell
+  # -->this is a type spec, it tells us what the function returns, like in haskell
+  @spec new() :: t()
   def new() do
     %{}
   end
@@ -32,7 +34,8 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   """
   @spec increment(t(), any()) :: t()
   def increment(clock, process) do
-    Map.update(clock, process, 1, fn current_value -> current_value + 1 end) #updates were key=process, if it exists, increment the value by 1, otherwise add it with a value of 1
+    # updates were key=process, if it exists, increment the value by 1, otherwise add it with a value of 1
+    Map.update(clock, process, 1, fn current_value -> current_value + 1 end)
   end
 
   @doc """
@@ -40,7 +43,7 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   """
   @spec merge(t(), t()) :: t()
   def merge(local_clock, remote_clock) do
-    #given two vector clocks, merge them by taking the maximum value
+    # given two vector clocks, merge them by taking the maximum value
     Map.merge(local_clock, remote_clock, fn _process, local_val, remote_val ->
       max(local_val, remote_val)
     end)
@@ -50,7 +53,8 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   Compares two vector clocks to determine their causal relationship.
   Returns an atom indicating the relationship
   """
-  @spec compare(t(), t()) :: :before | :after | :concurrent | :equal #we want to return one of these four values
+  # we want to return one of these four values
+  @spec compare(t(), t()) :: :before | :after | :concurrent | :equal
   def compare(clock1, clock2) do
     all_processes = MapSet.union(MapSet.new(Map.keys(clock1)), MapSet.new(Map.keys(clock2)))
 
@@ -63,7 +67,8 @@ defmodule P2PDocs.Network.NaiveVectorClock do
         greater: acc.greater || v1 > v2
       }
 
-      if new_acc.less && new_acc.greater, do: {:halt, :concurrent}, else: {:cont, new_acc} #if both less and greater are true, we can stop checking
+      # if both less and greater are true, we can stop checking
+      if new_acc.less && new_acc.greater, do: {:halt, :concurrent}, else: {:cont, new_acc}
     end)
     |> case do
       :concurrent -> :concurrent
@@ -77,7 +82,8 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   @doc """
   Returns true if clock1 is causally before clock2.
   """
-  @spec before?(t(), t()) :: boolean() #helper function, it can be useful
+  # helper function, it can be useful
+  @spec before?(t(), t()) :: boolean()
   def before?(clock1, clock2) do
     compare(clock1, clock2) == :before
   end
@@ -85,7 +91,8 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   @doc """
   Returns true if clock1 is causally after clock2.
   """
-  @spec after?(t(), t()) :: boolean() #same as above
+  # same as above
+  @spec after?(t(), t()) :: boolean()
   def after?(clock1, clock2) do
     compare(clock1, clock2) == :after
   end
@@ -93,9 +100,9 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   @doc """
   Returns true if the two clocks are concurrent.
   """
-  @spec concurrent?(t(), t()) :: boolean() #same as above
+  # same as above
+  @spec concurrent?(t(), t()) :: boolean()
   def concurrent?(clock1, clock2) do
     compare(clock1, clock2) == :concurrent
   end
-
 end

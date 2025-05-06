@@ -230,14 +230,12 @@ defmodule OSTree do
       true -> select(r, k - left_size - 1)
     end
   end
+
   defp inorder(nil) do
     []
   end
-  
+
   defp inorder(%Node{left: l, right: r} = node) do
     inorder(l) ++ [node.value] ++ inorder(r)
   end
 end
-
-
-
