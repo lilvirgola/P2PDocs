@@ -64,7 +64,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
   The node is removed from the list of nodes and its vector clock is reset.
   """
   def remove_node(server \\ __MODULE__, old_node) do
-    GenServer.call(server, {:add_node, old_node})
+    GenServer.call(server, {:remove_node, old_node})
   end
 
   @doc """
@@ -144,8 +144,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.merge(state.t, t_prime)
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
-    {delivered, remaining_buffer, new_d} =
-      attempt_deliveries(new_buffer, state.d, new_t, id)
+    {delivered, remaining_buffer, new_d} = attempt_deliveries(new_buffer, state.d, new_t, id)
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(msg)
@@ -185,9 +184,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
       {:noreply,
        %{
          state
-         | nodes: List.delete(state.nodes, old_node),
-           # Reset delivery counter for removed node? ## TODO: Check if this is correct
-           d: VectorClock.merge(state.d, VectorClock.new(old_node))
+         | nodes: List.delete(state.nodes, old_node)
        }}
     else
       {:noreply, state}
@@ -216,30 +213,24 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   # """
   # TODO: Check if this is correct, should be, like in the slides, but idk
-  defp attempt_deliveries(buffer, d, current_t, my_id) do
+  defp attempt_deliveries(buffer, d, current_t, my_id, delivered) do
     # For each message in the buffer, check if it can be delivered
-    Enum.reduce(buffer, {[], buffer, d}, fn {msg, sender_id, t_prime},
-                                            {delivered, remaining, d_acc} ->
-      cond do
-        # Case 1: Message is from myself - deliver immediately
-        sender_id == my_id ->
-          new_d = VectorClock.increment(d_acc, my_id)
+    deliverable =
+      Enum.find(buffer, fn {_msg, sender_id, t_prime} ->
+        deliverable?(t_prime, sender_id, d, current_t)
+      end)
 
-          {[{msg, sender_id, t_prime} | delivered],
-           MapSet.delete(remaining, {msg, sender_id, t_prime}), new_d}
+    case deliverable do
+      nil ->
+        {delivered, buffer, d}
 
-        # Case 2: Message passes causal delivery condition
-        deliverable?(t_prime, sender_id, d_acc, current_t) ->
-          new_d = VectorClock.increment(d_acc, sender_id)
+      found ->
+        new_d = VectorClock.increment(d, sender_id)
 
-          {[{msg, sender_id, t_prime} | delivered],
-           MapSet.delete(remaining, {msg, sender_id, t_prime}), new_d}
-
-        # Case 3: Not deliverable yet
-        true ->
-          {delivered, remaining, d_acc}
-      end
-    end)
+        attempt_deliveries(MapSet.delete(buffer, found), new_d, current_t, my_id, [
+          found | delivered
+        ])
+    end
   end
 
   # @doc """
