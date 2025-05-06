@@ -144,7 +144,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.merge(state.t, t_prime)
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
-    {delivered, remaining_buffer, new_d} = attempt_deliveries(new_buffer, state.d, new_t, id)
+    {delivered, remaining_buffer, new_d} =
+      attempt_deliveries(new_buffer, state.d, new_t, id)
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(msg)
@@ -215,22 +216,13 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # TODO: Check if this is correct, should be, like in the slides, but idk
   defp attempt_deliveries(buffer, d, current_t, my_id, delivered) do
     # For each message in the buffer, check if it can be delivered
-    deliverable =
-      Enum.find(buffer, fn {_msg, sender_id, t_prime} ->
-        deliverable?(t_prime, sender_id, d, current_t)
-      end)
-
+    deliverable = Enum.find(buffer, fn {_msg, sender_id, t_prime} -> deliverable?(t_prime, sender_id, d, current_t) end)
     case deliverable do
-      nil ->
-        {delivered, buffer, d}
-
-      found ->
-        new_d = VectorClock.increment(d, sender_id)
-
-        attempt_deliveries(MapSet.delete(buffer, found), new_d, current_t, my_id, [
-          found | delivered
-        ])
-    end
+    nil -> {delivered, buffer, d}
+    found -> 
+      new_d = VectorClock.increment(d, elem(sender_id,2))
+      attempt_deliveries(MapSet.delete(buffer, found), new_d, current_t, my_id, [found | delivered])
+      end
   end
 
   # @doc """
