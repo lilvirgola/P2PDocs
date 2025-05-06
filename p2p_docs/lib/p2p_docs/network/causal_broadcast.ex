@@ -145,7 +145,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
     {delivered, remaining_buffer, new_d} =
-      attempt_deliveries(new_buffer, state.d, new_t, id)
+      attempt_deliveries(new_buffer, state.d, new_t, id,[])
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(msg)
@@ -220,7 +220,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     case deliverable do
     nil -> {delivered, buffer, d}
     found -> 
-      new_d = VectorClock.increment(d, elem(sender_id,2))
+      new_d = VectorClock.increment(d, elem(found,2))
       attempt_deliveries(MapSet.delete(buffer, found), new_d, current_t, my_id, [found | delivered])
       end
   end
