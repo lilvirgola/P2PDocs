@@ -3,7 +3,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Operation-based CRDT for collaborative text editing using an adaptive LSEQ-inspired allocation.
   Supports local and remote insertions and deletions.
   """
-
+  
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree

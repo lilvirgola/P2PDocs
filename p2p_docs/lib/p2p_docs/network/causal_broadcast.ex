@@ -250,6 +250,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
   defp handle_delivery(msg) do
     # Placeholder for actual delivery logic
     Logger.info("Delivering message: #{inspect(msg)}")
-    CRDT.Manager.receive(msg)
+    P2PDocs.CRDT.Manager.receive(msg)
   end
 end
