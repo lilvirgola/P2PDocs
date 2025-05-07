@@ -227,7 +227,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
         attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, [found | delivered])
 
       _ ->
-        raise "ERROR: invalid element in buffer!"
+        Logger.info("ERROR: invalid element in buffer!")
+        {delivered, buffer, d}
     end
   end
 
@@ -249,5 +250,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
   defp handle_delivery(msg) do
     # Placeholder for actual delivery logic
     Logger.info("Delivering message: #{inspect(msg)}")
+    CRDT.Manager.receive(msg)
   end
 end

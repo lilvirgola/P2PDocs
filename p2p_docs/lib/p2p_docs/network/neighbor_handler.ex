@@ -92,6 +92,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
     interval = Keyword.get(opts, :interval, @interval)
     secret = Keyword.get(opts, :secret, @secret)
+    Node.set_cookie(Node.self(), :secret)
 
     node_name = Atom.to_string(node())
 

@@ -1,5 +1,6 @@
 defmodule EchoWave.EchoNode do
   use GenServer
+  require Logger
 
   defstruct id: nil,
             neighbors: nil,
@@ -24,7 +25,7 @@ defmodule EchoWave.EchoNode do
   end
 
   def handle_cast({:token, from, count}, %__MODULE__{parent: nil} = state) do
-    IO.puts("Node #{state.id} received token for the first time, from #{inspect(from)}")
+    Logger.debug("Node #{state.id} received token for the first time, from #{inspect(from)}")
 
     neighbors_except_parent = state.neighbors -- [from]
 
@@ -43,7 +44,7 @@ defmodule EchoWave.EchoNode do
   end
 
   def handle_cast({:token, from, count}, state) do
-    IO.puts("Node #{state.id} received token from #{inspect(from)}")
+    Logger.debug("Node #{state.id} received token from #{inspect(from)}")
 
     new_to_be_received = state.to_be_received -- [from]
 
@@ -54,7 +55,7 @@ defmodule EchoWave.EchoNode do
     }
 
     if Enum.empty?(new_to_be_received) do
-      IO.puts(
+      Logger.debug(
         "Node #{state.id} reports token back to #{inspect(state.parent)} with #{new_state.count} children"
       )
 

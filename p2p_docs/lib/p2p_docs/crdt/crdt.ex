@@ -75,7 +75,7 @@ defmodule CrdtText do
   @doc """
   Locally insert 'value' at index, broadcasting to peers.
   """
-  @spec insert_local(t(), non_neg_integer(), binary()) :: t()
+  @spec insert_local(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
   def insert_local(state, index, value) do
     left = get_at!(state, index)
     right = get_at!(state, index + 1)
@@ -107,27 +107,29 @@ defmodule CrdtText do
               " and #{inspect(right.pos)} does not satisfy intention preservation"
     end
 
-    Broadcast.sendMessage(:insert, char)
-
-    %CRDT{
-      chars: OSTree.insert(state.chars, char),
-      pos_by_id: Map.put(state.pos_by_id, new_id, new_pos),
-      strategies: strategies,
-      counter: state.counter + 1,
-      peer_id: state.peer_id
-    }
+    {char,
+     %CRDT{
+       chars: OSTree.insert(state.chars, char),
+       pos_by_id: Map.put(state.pos_by_id, new_id, new_pos),
+       strategies: strategies,
+       counter: state.counter + 1,
+       peer_id: state.peer_id
+     }}
   end
 
   @doc """
   Locally delete element at 'index', broadcasting to peers.
   """
-  @spec delete_local(t(), non_neg_integer()) :: t()
+  @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
   def delete_local(%CRDT{} = state, index) do
     char = get_at!(state, index)
 
     new_chars = OSTree.delete(state.chars, char)
 
-    %CRDT{state | chars: new_chars, pos_by_id: Map.delete(state.pos_by_id, char.id)}
+    {
+      char.id,
+      %CRDT{state | chars: new_chars, pos_by_id: Map.delete(state.pos_by_id, char.id)}
+    }
   end
 
   @doc """
