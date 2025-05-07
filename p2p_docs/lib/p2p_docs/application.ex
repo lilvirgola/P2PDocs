@@ -16,6 +16,7 @@ defmodule P2PDocs.Application do
       {P2PDocs.Network.NeighborHandler, []},
       # Start the causal broadcast
       {P2PDocs.Network.CausalBroadcast, [my_id: node()]},
+      {CRDT.Manager, [peer_id: node()]},
       # Registry for the Echo-Wave
       {Registry, keys: :unique, name: :echo_registry}
     ]

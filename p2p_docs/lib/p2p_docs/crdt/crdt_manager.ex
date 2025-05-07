@@ -3,17 +3,15 @@ defmodule CRDT.Manager do
   require Logger
 
   defstruct peer_id: nil,
-            broadcast_id: nil,
             crdt: nil
 
   def start_link(peer_id, broadcast_id) do
-    GenServer.start_link(__MODULE__, {peer_id, broadcast_id})
+    GenServer.start_link(__MODULE__, peer_id)
   end
 
-  def init({id, brd_id}) do
+  def init(id) do
     state = %__MODULE__{
       peer_id: id,
-      broadcast_id: brd_id,
       crdt: CrdtText.new(id)
     }
 
