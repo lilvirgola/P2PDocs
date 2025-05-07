@@ -114,4 +114,9 @@ defmodule P2PDocs.CRDT.Manager do
 
     {:noreply, new_state}
   end
+
+  def handle_cast(_, state) do
+  Logger.error("Message not valid!")
+  {:noreply, state}
+  end
 end
