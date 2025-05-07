@@ -7,14 +7,13 @@ defmodule P2PDocs.Network.NeighborHandler do
   It sends periodic heartbeat messages to discover other peers and maintains a list of active peers.
   """
   ## Constants and Defaults, it gets the default values from the application config at compile time
-  @default_port Application.compile_env(:p2p_docs, __MODULE__)[:port] || 45892
-  @default_mcast_if Application.compile_env(:p2p_docs, __MODULE__)[:mcast_if] || {192, 168, 1, 1}
-  @default_mcast_addr Application.compile_env(:p2p_docs, __MODULE__)[:mcast_addr] ||
-                        {224, 1, 1, 1}
-  @default_iface Application.compile_env(:p2p_docs, __MODULE__)[:iface] || {0, 0, 0, 0}
-  @default_ttl Application.compile_env(:p2p_docs, __MODULE__)[:ttl] || 4
-  @interval Application.compile_env(:p2p_docs, __MODULE__)[:interval] || 5_000
-  @secret Application.compile_env(:p2p_docs, __MODULE__)[:secret] || "default"
+  @default_port Application.compile_env(:p2p_docs, :neighbor_handler)[:port] || 45892
+  @default_mcast_if Application.compile_env(:p2p_docs, :neighbor_handler)[:mcast_if] || {192, 168, 1, 1}
+  @default_mcast_addr Application.compile_env(:p2p_docs, :neighbor_handler)[:mcast_addr] || {224, 1, 1, 1}
+  @default_iface Application.compile_env(:p2p_docs, :neighbor_handler)[:iface] || {0, 0, 0, 0}
+  @default_ttl Application.compile_env(:p2p_docs, :neighbor_handler)[:ttl] || 4
+  @interval Application.compile_env(:p2p_docs, :neighbor_handler)[:interval] || 5_000
+  @secret Application.compile_env(:p2p_docs, :neighbor_handler)[:secret] || "default"
 
   ## State Structure since it has a lot of fields, we define a struct for it
   defmodule State do
