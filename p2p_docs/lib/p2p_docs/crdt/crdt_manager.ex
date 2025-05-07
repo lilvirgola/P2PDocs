@@ -23,6 +23,11 @@ defmodule CRDT.Manager do
     GenServer.cast(__MODULE__, msg)
   end
 
+  def add_char(cnt) do
+    idx = :rand.uniform(cnt + 1)
+    GenServer.cast(__MODULE__, {:local_insert, idx, Integer.to_string(idx)})
+  end
+
   def handle_cast({:remote_insert, char}, state) do
     Logger.debug("Node #{state.peer_id} is applying the remote insert of #{char}!")
 
