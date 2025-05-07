@@ -5,9 +5,8 @@ defmodule CRDT.Manager do
   defstruct peer_id: nil,
             crdt: nil
 
-  @impl true
   def start_link(peer_id) do
-    GenServer.start_link(__MODULE__, peer_id)
+    GenServer.start_link(__MODULE__, peer_id, name: __MODULE__)
   end
 
   def init(id) do
@@ -23,13 +22,32 @@ defmodule CRDT.Manager do
     GenServer.cast(__MODULE__, msg)
   end
 
-  def add_char(cnt) do
-    idx = :rand.uniform(cnt + 1)
-    GenServer.cast(__MODULE__, {:local_insert, idx, Integer.to_string(idx)})
+  def add_char(n) do
+    total = n
+
+    Enum.reduce(1..total,0, fn i, st ->
+      # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
+      # pick random adjacent pair
+      idx = :rand.uniform(i)
+      GenServer.cast(__MODULE__, {:local_insert, idx, Integer.to_string(i)})
+      st
+    end)
+  end
+
+  def print_state do
+    GenServer.call(__MODULE__, :get_state)
+  end
+
+  @impl true
+  def handle_call(:get_state, _from, state) do
+    ans = CrdtText.get_plain_text(state.crdt)
+    {:reply, ans, state}
   end
 
   def handle_cast({:remote_insert, char}, state) do
-    Logger.debug("Node #{state.peer_id} is applying the remote insert of #{char}!")
+    Logger.debug(
+      "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
+    )
 
     new_state = %__MODULE__{
       state
@@ -40,7 +58,9 @@ defmodule CRDT.Manager do
   end
 
   def handle_cast({:remote_delete, target_id}, state) do
-    Logger.debug("Node #{state.id} is applying the remote delete of #{target_id}!")
+    Logger.debug(
+      "Node #{inspect(state.peer_id)} is applying the remote delete of #{inspect(target_id)}!"
+    )
 
     new_state = %__MODULE__{
       state
@@ -51,7 +71,7 @@ defmodule CRDT.Manager do
   end
 
   def handle_cast({:local_insert, index, value}, state) do
-    Logger.debug("Node #{state.peer_id} is applying the local insert!")
+    Logger.debug("Node #{inspect(state.peer_id)} is applying the local insert at #{index}!")
 
     {new_char, new_crdt} = CrdtText.insert_local(state.crdt, index, value)
 
