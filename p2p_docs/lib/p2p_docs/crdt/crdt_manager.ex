@@ -29,7 +29,7 @@ defmodule CRDT.Manager do
       # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
       # pick random adjacent pair
       idx = :rand.uniform(i)
-      GenServer.cast(__MODULE__, {:local_insert, idx, Integer.to_string(i)})
+      GenServer.cast(__MODULE__, {:local_insert, idx, "a" <> Integer.to_string(i)})
       st
     end)
   end
@@ -42,6 +42,13 @@ defmodule CRDT.Manager do
   def handle_call(:get_state, _from, state) do
     ans = CrdtText.get_plain_text(state.crdt)
     {:reply, ans, state}
+  end
+
+  def handle_cast({:get_crdt}, state) do
+    Logger.debug(
+      "Node #{inspect(state.peer_id)} is sending its state!"
+    )
+    {:reply, state.crdt, state}
   end
 
   def handle_cast({:remote_insert, char}, state) do
