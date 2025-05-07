@@ -5,7 +5,8 @@ defmodule CRDT.Manager do
   defstruct peer_id: nil,
             crdt: nil
 
-  def start_link(peer_id, broadcast_id) do
+  @impl true
+  def start_link(peer_id) do
     GenServer.start_link(__MODULE__, peer_id)
   end
 
