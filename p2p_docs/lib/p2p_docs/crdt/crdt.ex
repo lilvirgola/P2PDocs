@@ -1,4 +1,4 @@
-defmodule CrdtText do
+defmodule P2PDocs.CRDT.CrdtText do
   @moduledoc """
   Operation-based CRDT for collaborative text editing using an adaptive LSEQ-inspired allocation.
   Supports local and remote insertions and deletions.
@@ -6,8 +6,7 @@ defmodule CrdtText do
 
   import Bitwise
 
-  alias CustomBroadcast, as: Broadcast
-  alias OSTree
+  alias P2PDocs.CRDT.OSTree, as: OSTree
 
   alias __MODULE__, as: CRDT
 

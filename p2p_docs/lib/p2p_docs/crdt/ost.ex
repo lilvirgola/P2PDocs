@@ -1,4 +1,4 @@
-defmodule OSTree.Node do
+defmodule P2PDocs.CRDT.OSTree.Node do
   @moduledoc """
   Internal node struct for the AVL order-statistics tree.
   Fields:
@@ -15,13 +15,13 @@ defmodule OSTree.Node do
             size: 1
 end
 
-defmodule OSTree do
+defmodule P2PDocs.CRDT.OSTree do
   @moduledoc """
   An AVL order-statistics tree with custom comparator, supporting
   insertion, deletion, and k-th smallest element selection in O(log n).
   """
-  alias __MODULE__, as: OST
-  alias OST.Node
+  alias __MODULE__, as: OSTree
+  alias OSTree.Node
 
   @type comparator :: (any(), any() -> integer())
   defstruct comparator: nil, root: nil
@@ -31,7 +31,7 @@ defmodule OSTree do
   """
   @spec new(comparator()) :: %OSTree{}
   def new(comp) when is_function(comp, 2) do
-    %OST{comparator: comp, root: nil}
+    %OSTree{comparator: comp, root: nil}
   end
 
   @doc """
@@ -54,7 +54,7 @@ defmodule OSTree do
   Insert a value into the tree. Duplicates are ignored.
   """
   @spec insert(%OSTree{}, any()) :: %OSTree{}
-  def insert(%OST{comparator: comp, root: root} = tree, value) do
+  def insert(%OSTree{comparator: comp, root: root} = tree, value) do
     %{tree | root: comp_insert(comp, root, value)}
   end
 
@@ -62,7 +62,7 @@ defmodule OSTree do
   Delete a value from the tree. If absent, no change.
   """
   @spec delete(%OSTree{}, any()) :: %OSTree{}
-  def delete(%OST{comparator: comp, root: root} = tree, value) do
+  def delete(%OSTree{comparator: comp, root: root} = tree, value) do
     %{tree | root: comp_delete(comp, root, value)}
   end
 
@@ -70,7 +70,7 @@ defmodule OSTree do
   Return the k-th smallest element (1-based). Returns 'nil' if out of bounds.
   """
   @spec kth_element(%OSTree{}, integer()) :: any() | nil
-  def kth_element(%OST{root: root}, k) when is_integer(k) and k > 0 do
+  def kth_element(%OSTree{root: root}, k) when is_integer(k) and k > 0 do
     select(root, k)
   end
 

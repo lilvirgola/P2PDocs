@@ -1,6 +1,8 @@
-defmodule CRDT.Manager do
+defmodule P2PDocs.CRDT.Manager do
   use GenServer
   require Logger
+
+  alias P2PDocs.CRDT.CrdtText, as: CrdtText
 
   defstruct peer_id: nil,
             crdt: nil
@@ -9,6 +11,7 @@ defmodule CRDT.Manager do
     GenServer.start_link(__MODULE__, peer_id, name: __MODULE__)
   end
 
+  @impl true
   def init(id) do
     state = %__MODULE__{
       peer_id: id,
@@ -44,6 +47,7 @@ defmodule CRDT.Manager do
     {:reply, ans, state}
   end
 
+  @impl true
   def handle_cast({:get_crdt}, state) do
     Logger.debug(
       "Node #{inspect(state.peer_id)} is sending its state!"
@@ -51,6 +55,7 @@ defmodule CRDT.Manager do
     {:reply, state.crdt, state}
   end
 
+  @impl true
   def handle_cast({:remote_insert, char}, state) do
     Logger.debug(
       "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
@@ -64,6 +69,7 @@ defmodule CRDT.Manager do
     {:noreply, new_state}
   end
 
+  @impl true
   def handle_cast({:remote_delete, target_id}, state) do
     Logger.debug(
       "Node #{inspect(state.peer_id)} is applying the remote delete of #{inspect(target_id)}!"
@@ -77,6 +83,7 @@ defmodule CRDT.Manager do
     {:noreply, new_state}
   end
 
+  @impl true
   def handle_cast({:local_insert, index, value}, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is applying the local insert at #{index}!")
 
@@ -92,6 +99,7 @@ defmodule CRDT.Manager do
     {:noreply, new_state}
   end
 
+  @impl true
   def handle_cast({:local_delete, index}, state) do
     Logger.debug("Node #{state.id} is applying the local delete!")
 
