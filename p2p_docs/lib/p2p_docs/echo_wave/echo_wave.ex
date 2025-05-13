@@ -1,4 +1,4 @@
-defmodule EchoWave.EchoNode do
+defmodule P2PDocs.EchoWave do
   use GenServer
   require Logger
 

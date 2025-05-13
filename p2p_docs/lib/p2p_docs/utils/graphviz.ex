@@ -1,4 +1,4 @@
-defmodule EchoWave.Graphviz do
+defmodule P2PDocs.Utils.Graphviz do
   def to_dot(topology, opts \\ []) do
     directed = Keyword.get(opts, :directed, false)
 
