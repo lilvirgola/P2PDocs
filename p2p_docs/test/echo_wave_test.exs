@@ -3,6 +3,8 @@ defmodule EchoWaveTest do
   alias P2PDocs.EchoWave
   alias P2PDocs.Utils
 
+  @moduletag :capture_log
+
   test "echo wave static topology" do
     topology = %{
       :a => [:b, :c],
@@ -15,23 +17,36 @@ defmodule EchoWaveTest do
     Utils.Graphviz.save_dot_file(topology, "static_topology.dot")
 
     root = :a
-    size = Map.keys(topology) |> Enum.count()
     start_echo_wave(topology, root)
-    assert_receive {:tree_complete, ^root, ^size, nil}, 1_000
   end
 
   test "echo wave random connected graph" do
-    topology = build_random_topology(16)
+    topology = build_random_topology(2 ** 5, 1.2)
 
     Utils.Graphviz.save_dot_file(topology, "random_topology.dot")
 
     root = Map.keys(topology) |> Enum.random()
-    size = Map.keys(topology) |> Enum.count()
+
     start_echo_wave(topology, root)
-    assert_receive {:tree_complete, ^root, ^size, nil}, 2_000
   end
 
-  defp build_random_topology(size) do
+  defp start_echo_wave(topology, root) do
+    size = Map.keys(topology) |> Enum.count()
+
+    for {id, neighbors} <- topology do
+      EchoWave.start_link({id, neighbors})
+    end
+
+    GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, nil})
+
+    {time, value} =
+      :timer.tc(fn -> assert_receive {:tree_complete, ^root, ^size, _}, 10 * size end)
+
+    IO.puts("Echo Wave on #{size} nodes: #{time} microsecond")
+    value
+  end
+
+  defp build_random_topology(size, gamma) do
     nodes = Enum.map(1..size, fn i -> String.to_atom("n#{i}") end)
 
     # Build a spanning tree
@@ -42,7 +57,9 @@ defmodule EchoWaveTest do
       |> Enum.map(fn [a, b] -> {a, b} end)
 
     # Add some random extra edges
-    extra_edges = for a <- nodes, b <- nodes, a < b, :rand.uniform() < 0.2, do: {a, b}
+    extra_edges =
+      for a <- nodes, b <- nodes, a < b, :rand.uniform() < 1 / size ** gamma, do: {a, b}
+
     edges = Enum.uniq(tree_edges ++ extra_edges)
 
     Map.new(nodes, fn n ->
@@ -55,13 +72,5 @@ defmodule EchoWaveTest do
 
       {n, neighbors}
     end)
-  end
-
-  defp start_echo_wave(topology, root) do
-    for {id, neighbors} <- topology do
-      EchoWave.start_link({id, neighbors})
-    end
-
-    GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, nil})
   end
 end

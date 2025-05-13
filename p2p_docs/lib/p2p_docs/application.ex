@@ -38,8 +38,8 @@ defmodule P2PDocs.Application do
       {@api_server, []},
       {@neighbor_handler, []},
       {@causal_broadcast, [my_id: node_id]},
-      {@crdt_manager, [peer_id: node_id]},
-      {Registry, keys: :unique, name: :echo_registry}
+      {@crdt_manager, [peer_id: node_id]}
+      # {Registry, keys: :unique, name: :echo_registry}
     ]
   end
 end

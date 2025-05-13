@@ -5,21 +5,34 @@ defmodule P2PDocs.Utils.Graphviz do
     header = if directed, do: "digraph G {", else: "graph G {"
     connector = if directed, do: " -> ", else: " -- "
 
+    attrs = Keyword.get(opts, :attrs, layout: "sfdp", beautify: "true", overlap: "scale")
+
+    attr_list =
+      attrs
+      |> Enum.map(fn {k, v} -> "#{k}=\"#{v}\"" end)
+      |> Enum.join(", ")
+
+    graph_attr_line = "  graph [#{attr_list}];"
+
     edges =
-      Enum.flat_map(topology, fn {node, neighbors} ->
-        Enum.map(neighbors, fn neighbor ->
-          ordered = Enum.sort([node, neighbor])
-          {Enum.at(ordered, 0), Enum.at(ordered, 1)}
-        end)
+      topology
+      |> Enum.flat_map(fn {node, neighbors} ->
+        for m <- neighbors, do: Enum.sort([node, m]) |> List.to_tuple()
       end)
       |> Enum.uniq()
 
     body =
-      Enum.map(edges, fn {a, b} ->
+      for {a, b} <- edges do
         "  #{a}#{connector}#{b};"
-      end)
+      end
 
-    Enum.join([header | body] ++ ["}"], "\n")
+    [
+      header,
+      graph_attr_line
+      | body
+    ]
+    |> Enum.concat(["}"])
+    |> Enum.join("\n")
   end
 
   def save_dot_file(topology, file_name, opts \\ []) do
