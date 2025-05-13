@@ -3,7 +3,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Operation-based CRDT for collaborative text editing using an adaptive LSEQ-inspired allocation.
   Supports local and remote insertions and deletions.
   """
-  
+
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree
@@ -58,16 +58,16 @@ defmodule P2PDocs.CRDT.CrdtText do
 
   defp sentinel_markers() do
     [
-      %{id: {:__begin__, 0}, pos: [{0, "$"}], value: nil},
-      %{id: {:__end__, 0}, pos: [{@initial_base, "$"}], value: nil}
+      %{id: {:begin, 0}, pos: [{0, "$"}], value: nil},
+      %{id: {:end, 0}, pos: [{@initial_base, "$"}], value: nil}
     ]
   end
 
   defp compare_pos(a, b) do
     cond do
-      a == b -> 0
+      a > b -> 1
       a < b -> -1
-      true -> 1
+      true -> 0
     end
   end
 
@@ -152,6 +152,10 @@ defmodule P2PDocs.CRDT.CrdtText do
   """
   @spec apply_remote_delete(t(), char_id()) :: t()
   def apply_remote_delete(%CRDT{} = state, target_id) do
+    if not Map.has_key?(state.pos_by_id, target_id) do
+      state
+    end
+
     pos = Map.fetch!(state.pos_by_id, target_id)
 
     # id and value are not used by comparator, so they are not needed for delete

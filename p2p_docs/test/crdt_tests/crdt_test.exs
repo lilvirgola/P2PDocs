@@ -16,7 +16,8 @@ end
 
 defmodule CrdtTextFastTest do
   use ExUnit.Case
-  alias CrdtText
+  alias P2PDocs.CRDT.CrdtText
+  alias P2PDocs.CRDT.OSTree
 
   @peer "peer1"
 
@@ -33,7 +34,8 @@ defmodule CrdtTextFastTest do
         # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
         # pick random adjacent pair
         idx = :rand.uniform(OSTree.get_size(st.chars) - 1)
-        CrdtText.insert_local(st, idx, Integer.to_string(i))
+        {_, new_st} = CrdtText.insert_local(st, idx, Integer.to_string(i))
+        new_st
       end)
 
     # IO.inspect(CrdtText.get_plain_text(final_state))

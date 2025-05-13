@@ -5,7 +5,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
   alias P2PDocs.Network.NaiveVectorClock, as: VectorClock
   require Logger
 
-  @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] || :causal_broadcast_state
+  @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
+                :causal_broadcast_state
 
   @moduledoc """
   This module implements our causal broadcast protocol using vector clocks.
@@ -86,10 +87,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
     my_id = Keyword.fetch!(opts, :my_id)
     initial_nodes = Keyword.get(opts, :nodes, [my_id]) |> Enum.uniq()
 
-
     # Subscribe to neighbor events
-    get_peer_handler = Application.get_env(:p2p_docs, :neighbor_handler)[:module] ||
-                     P2PDocs.Network.NeighborHandler
+    get_peer_handler =
+      Application.get_env(:p2p_docs, :neighbor_handler)[:module] ||
+        P2PDocs.Network.NeighborHandler
+
     :ok = get_peer_handler.subscribe(self())
     # Initialize the state with the given options
     # Try to fetch the state from ETS
@@ -100,21 +102,23 @@ defmodule P2PDocs.Network.CausalBroadcast do
           Logger.info("State found in ETS: #{inspect(state)}")
           # restore the state from ETS
           {:ok, state}
+
         [] ->
-            Logger.info("No state found in ETS, creating new state")
-            # No state found in ETS, create new state
-            initial_state = %State{
-              my_id: my_id,
-              nodes: initial_nodes,
-              t: VectorClock.new(my_id),
-              d: VectorClock.new(),
-              buffer: MapSet.new(),
-              delivery_pid: Keyword.get(opts, :delivery_pid, self()),
-              delivery_log: []
-            }
-            # Store the initial state in the ETS table
-            :ets.insert(@table_name, {my_id, initial_state})
-            {:ok, initial_state}
+          Logger.info("No state found in ETS, creating new state")
+          # No state found in ETS, create new state
+          initial_state = %State{
+            my_id: my_id,
+            nodes: initial_nodes,
+            t: VectorClock.new(my_id),
+            d: VectorClock.new(),
+            buffer: MapSet.new(),
+            delivery_pid: Keyword.get(opts, :delivery_pid, self()),
+            delivery_log: []
+          }
+
+          # Store the initial state in the ETS table
+          :ets.insert(@table_name, {my_id, initial_state})
+          {:ok, initial_state}
       end
     catch
       :error, :badarg ->
@@ -159,6 +163,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     for node <- state.nodes do
       GenServer.cast({__MODULE__, node}, {:message, msg, state.my_id, new_t})
     end
+
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
     {:noreply, %{state | t: new_t}}
@@ -184,8 +189,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
     end
 
     # Update the ETS table with the new state
-    :ets.insert(@table_name, {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}})
-
+    :ets.insert(
+      @table_name,
+      {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}
+    )
 
     {:noreply,
      %{
@@ -193,7 +200,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
        | t: new_t,
          d: new_d,
          buffer: remaining_buffer,
-        delivery_log: state.delivery_log ++ delivered,
+         delivery_log: state.delivery_log ++ delivered
      }}
   end
 
@@ -208,7 +215,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
       new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
 
       # Update the ETS table with the new state
-      :ets.insert(@table_name, {state.my_id, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}})
+      :ets.insert(
+        @table_name,
+        {state.my_id, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
+      )
+
       {:noreply, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
     end
   end
@@ -217,7 +228,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
   @impl true
   def handle_cast({:remove_node, old_node}, state) do
     if old_node in state.nodes do
-      :ets.insert(@table_name, {state.my_id, %{state | nodes: List.delete(state.nodes, old_node)}})
+      :ets.insert(
+        @table_name,
+        {state.my_id, %{state | nodes: List.delete(state.nodes, old_node)}}
+      )
+
       {:noreply,
        %{
          state
@@ -235,17 +250,14 @@ defmodule P2PDocs.Network.CausalBroadcast do
   """
   @impl true
   def handle_call(:get_state, _from, state) do
-    [{_key, saved_state}]=:ets.lookup(@table_name, state.my_id)
-    {:reply,
-    saved_state,
-     state}
+    [{_key, saved_state}] = :ets.lookup(@table_name, state.my_id)
+    {:reply, saved_state, state}
   end
 
   @impl true
   def handle_call(:crash, _from, _state) do
     raise "simulated crash"
   end
-
 
   # Private helper functions
   # @doc """

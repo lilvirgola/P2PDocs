@@ -83,6 +83,10 @@ defmodule P2PDocs.CRDT.OSTree do
     inorder(root)
   end
 
+  def to_graphviz(%OSTree{root: root}) do
+    graphify(root)
+  end
+
   # Helpers ---------------------------------------------------------------
   defp height(nil) do
     0
@@ -235,7 +239,27 @@ defmodule P2PDocs.CRDT.OSTree do
     []
   end
 
-  defp inorder(%Node{left: l, right: r} = node) do
-    inorder(l) ++ [node.value] ++ inorder(r)
+  defp inorder(%Node{value: v, left: l, right: r}) do
+    inorder(l) ++ [v] ++ inorder(r)
+  end
+
+  defp graphify(nil) do
+    Map.new()
+  end
+
+  defp graphify(%Node{value: v, left: l, right: r}) do
+    left_graph = graphify(l)
+    right_graph = graphify(r)
+
+    Map.merge(left_graph, right_graph)
+    |> Map.merge(%{
+      v =>
+        cond do
+          l != nil and r != nil -> [l.value, r.value]
+          l -> [l.value]
+          r -> [r.value]
+          true -> []
+        end
+    })
   end
 end

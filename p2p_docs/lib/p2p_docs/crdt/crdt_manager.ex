@@ -28,7 +28,7 @@ defmodule P2PDocs.CRDT.Manager do
   def add_char(n) do
     total = n
 
-    Enum.reduce(1..total,0, fn i, st ->
+    Enum.reduce(1..total, 0, fn i, st ->
       # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
       # pick random adjacent pair
       idx = :rand.uniform(i)
@@ -49,9 +49,7 @@ defmodule P2PDocs.CRDT.Manager do
 
   @impl true
   def handle_cast({:get_crdt}, state) do
-    Logger.debug(
-      "Node #{inspect(state.peer_id)} is sending its state!"
-    )
+    Logger.debug("Node #{inspect(state.peer_id)} is sending its state!")
     {:reply, state.crdt, state}
   end
 
@@ -116,7 +114,7 @@ defmodule P2PDocs.CRDT.Manager do
   end
 
   def handle_cast(_, state) do
-  Logger.error("Message not valid!")
-  {:noreply, state}
+    Logger.error("Message not valid!")
+    {:noreply, state}
   end
 end
