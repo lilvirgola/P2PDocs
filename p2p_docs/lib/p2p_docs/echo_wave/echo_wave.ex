@@ -12,6 +12,10 @@ defmodule P2PDocs.EchoWave do
     GenServer.start_link(__MODULE__, {id, neighbors}, name: get_peer(id))
   end
 
+  def start_echo_wave(msg) do
+    GenServer.cast(__MODULE__, {:token, self(), 0, msg})
+  end
+
   # def get_peer(id), do: {:via, Registry, {:echo_registry, id}}
   def get_peer(id), do: id
 

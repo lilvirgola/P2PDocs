@@ -21,7 +21,11 @@ defmodule EchoWaveTest do
   end
 
   test "echo wave random connected graph" do
-    topology = build_random_topology(2 ** 5, 1.2)
+    size = 2 ** 14
+    gamma = 1.2
+    {time, topology} = :timer.tc(fn -> build_random_topology(size, gamma) end)
+
+    IO.puts("Random graph creation with #{size} nodes: #{time} microseconds")
 
     Utils.Graphviz.save_dot_file(topology, "random_topology.dot")
 
@@ -42,7 +46,7 @@ defmodule EchoWaveTest do
     {time, value} =
       :timer.tc(fn -> assert_receive {:tree_complete, ^root, ^size, _}, 10 * size end)
 
-    IO.puts("Echo Wave on #{size} nodes: #{time} microsecond")
+    IO.puts("Echo Wave on #{size} nodes: #{time} microseconds")
     value
   end
 

@@ -26,7 +26,7 @@ defmodule P2PDocs.Application do
 
     # end
     :ets.new(@ets_causal_broadcast, [:named_table, :public, read_concurrency: true])
-    IO.inspect(@neighbor_handler, label: "ACTUAL NEIGHBOR HANDLER MODULE")
+    # IO.inspect(@neighbor_handler, label: "ACTUAL NEIGHBOR HANDLER MODULE")
 
     Supervisor.start_link(children(), strategy: :one_for_one, name: P2PDocs.Supervisor)
   end
