@@ -3,7 +3,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Operation-based CRDT for collaborative text editing using an adaptive LSEQ-inspired allocation.
   Supports local and remote insertions and deletions.
   """
-  
+
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree
@@ -121,7 +121,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   """
   @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
   def delete_local(%CRDT{} = state, index) do
-    char = get_at!(state, index)
+    char = get_at!(state, index + 1)
 
     new_chars = OSTree.delete(state.chars, char)
 
@@ -137,13 +137,14 @@ defmodule P2PDocs.CRDT.CrdtText do
   @spec apply_remote_insert(t(), crdt_char()) :: t()
   def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
     unless Map.has_key?(state.pos_by_id, id) do
-      %CRDT{
-        state
-        | chars: OSTree.insert(state.chars, char),
-          pos_by_id: Map.put(state.pos_by_id, id, pos)
-      }
+      {:ok,
+       %CRDT{
+         state
+         | chars: OSTree.insert(state.chars, char),
+           pos_by_id: Map.put(state.pos_by_id, id, pos)
+       }}
     else
-      state
+      {:ok, state}
     end
   end
 
@@ -152,20 +153,26 @@ defmodule P2PDocs.CRDT.CrdtText do
   """
   @spec apply_remote_delete(t(), char_id()) :: t()
   def apply_remote_delete(%CRDT{} = state, target_id) do
-    pos = Map.fetch!(state.pos_by_id, target_id)
+    case Map.fetch(state.pos_by_id, target_id) do
+      {:ok, val} ->
+        pos = val
+        # id and value are not used by comparator, so they are not needed for delete
+        new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
 
-    # id and value are not used by comparator, so they are not needed for delete
-    new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
+        {:ok,
+         %CRDT{
+           state
+           | chars: new_chars,
+             pos_by_id: Map.delete(state.pos_by_id, target_id)
+         }}
 
-    %CRDT{
-      state
-      | chars: new_chars,
-        pos_by_id: Map.delete(state.pos_by_id, target_id)
-    }
+      :error ->
+        {:ok, state}
+    end
   end
 
-  @spec get_plain_text(t()) :: [binary()]
-  def get_plain_text(%CRDT{chars: chars}) do
+  @spec to_plain_text(t()) :: [binary()]
+  def to_plain_text(%CRDT{chars: chars}) do
     Enum.map(OSTree.to_list(chars), fn x -> x.value end)
   end
 

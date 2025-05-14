@@ -54,7 +54,6 @@ defmodule P2PDocs.Network.NeighborHandlerMock do
   """
   @impl true
   def handle_call(:list_peers, _from, state) do
-
     {:reply, [], state}
   end
 
@@ -76,5 +75,4 @@ defmodule P2PDocs.Network.NeighborHandlerMock do
   def terminate(_reason, _state) do
     :ok
   end
-
 end

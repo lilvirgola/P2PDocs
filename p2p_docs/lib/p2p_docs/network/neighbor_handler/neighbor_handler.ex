@@ -8,8 +8,10 @@ defmodule P2PDocs.Network.NeighborHandler do
   """
   ## Constants and Defaults, it gets the default values from the application config at compile time
   @default_port Application.compile_env(:p2p_docs, :neighbor_handler)[:port] || 45892
-  @default_mcast_if Application.compile_env(:p2p_docs, :neighbor_handler)[:mcast_if] || {192, 168, 1, 1}
-  @default_mcast_addr Application.compile_env(:p2p_docs, :neighbor_handler)[:mcast_addr] || {224, 1, 1, 1}
+  @default_mcast_if Application.compile_env(:p2p_docs, :neighbor_handler)[:mcast_if] ||
+                      {192, 168, 1, 1}
+  @default_mcast_addr Application.compile_env(:p2p_docs, :neighbor_handler)[:mcast_addr] ||
+                        {224, 1, 1, 1}
   @default_iface Application.compile_env(:p2p_docs, :neighbor_handler)[:iface] || {0, 0, 0, 0}
   @default_ttl Application.compile_env(:p2p_docs, :neighbor_handler)[:ttl] || 4
   @interval Application.compile_env(:p2p_docs, :neighbor_handler)[:interval] || 5_000
