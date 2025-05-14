@@ -20,7 +20,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
     """
     defstruct [
       :my_id,
-      :nodes,
       # Vector clock
       t: %{},
       # Delivery counters
@@ -90,14 +89,13 @@ defmodule P2PDocs.Network.CausalBroadcast do
   @impl true
   def init(opts) do
     my_id = Keyword.fetch!(opts, :my_id)
-    initial_nodes = Keyword.get(opts, :nodes, [my_id]) |> Enum.uniq()
 
-    # Subscribe to neighbor events
-    get_peer_handler =
-      Application.get_env(:p2p_docs, :neighbor_handler)[:module] ||
-        P2PDocs.Network.NeighborHandler
+    # # Subscribe to neighbor events
+    # get_peer_handler =
+    #   Application.get_env(:p2p_docs, :neighbor_handler)[:module] ||
+    #     P2PDocs.Network.NeighborHandler
 
-    :ok = get_peer_handler.subscribe(self())
+    # :ok = get_peer_handler.subscribe(self())
     # Initialize the state with the given options
     # Try to fetch the state from ETS
     try do
@@ -113,7 +111,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
           # No state found in ETS, create new state
           initial_state = %State{
             my_id: my_id,
-            nodes: initial_nodes,
             t: VectorClock.new(my_id),
             d: VectorClock.new(),
             buffer: MapSet.new(),
@@ -134,25 +131,25 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   # Handle info messages from the neighbor handler part
 
-  @doc """
-  Handles incoming messages from the neighbor handler.
-  This includes messages about discovered and expired peers.
-  """
-  @impl true
-  def handle_info({:peer_discovered, %{name: node_name} = peer}, state) do
-    Logger.info("Peer discovered: #{inspect(peer)}")
-    new_node = String.to_existing_atom(node_name)
-    GenServer.cast(__MODULE__, {:add_node, new_node})
-    {:noreply, state}
-  end
+  # @doc """
+  # Handles incoming messages from the neighbor handler.
+  # This includes messages about discovered and expired peers.
+  # """
+  # @impl true
+  # def handle_info({:peer_discovered, %{name: node_name} = peer}, state) do
+  #   Logger.info("Peer discovered: #{inspect(peer)}")
+  #   new_node = String.to_existing_atom(node_name)
+  #   GenServer.cast(__MODULE__, {:add_node, new_node})
+  #   {:noreply, state}
+  # end
 
-  @impl true
-  def handle_info({:peer_expired, %{name: node_name} = peer}, state) do
-    Logger.info("Peer expired: #{inspect(peer)}")
-    old_node = String.to_existing_atom(node_name)
-    GenServer.cast(__MODULE__, {:remove_node, old_node})
-    {:noreply, state}
-  end
+  # @impl true
+  # def handle_info({:peer_expired, %{name: node_name} = peer}, state) do
+  #   Logger.info("Peer expired: #{inspect(peer)}")
+  #   old_node = String.to_existing_atom(node_name)
+  #   GenServer.cast(__MODULE__, {:remove_node, old_node})
+  #   {:noreply, state}
+  # end
 
   # Handle cast messages for broadcasting and receiving messages
 
@@ -206,44 +203,44 @@ defmodule P2PDocs.Network.CausalBroadcast do
      }}
   end
 
-  @impl true
-  def handle_cast({:add_node, new_node}, state) do
-    if new_node in state.nodes do
-      # Already exists
-      {:noreply, state}
-    else
-      # Initialize clocks for new node WITHOUT incrementing
-      new_t = VectorClock.merge(state.t, VectorClock.new(new_node))
-      new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
+  # @impl true
+  # def handle_cast({:add_node, new_node}, state) do
+  #   if new_node in state.nodes do
+  #     # Already exists
+  #     {:noreply, state}
+  #   else
+  #     # Initialize clocks for new node WITHOUT incrementing
+  #     new_t = VectorClock.merge(state.t, VectorClock.new(new_node))
+  #     new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
 
-      # Update the ETS table with the new state
-      :ets.insert(
-        @table_name,
-        {state.my_id, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
-      )
+  #     # Update the ETS table with the new state
+  #     :ets.insert(
+  #       @table_name,
+  #       {state.my_id, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
+  #     )
 
-      {:noreply, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
-    end
-  end
+  #     {:noreply, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
+  #   end
+  # end
 
-  # Handle removal of nodes,
-  @impl true
-  def handle_cast({:remove_node, old_node}, state) do
-    if old_node in state.nodes do
-      :ets.insert(
-        @table_name,
-        {state.my_id, %{state | nodes: List.delete(state.nodes, old_node)}}
-      )
+  # # Handle removal of nodes,
+  # @impl true
+  # def handle_cast({:remove_node, old_node}, state) do
+  #   if old_node in state.nodes do
+  #     :ets.insert(
+  #       @table_name,
+  #       {state.my_id, %{state | nodes: List.delete(state.nodes, old_node)}}
+  #     )
 
-      {:noreply,
-       %{
-         state
-         | nodes: List.delete(state.nodes, old_node)
-       }}
-    else
-      {:noreply, state}
-    end
-  end
+  #     {:noreply,
+  #      %{
+  #        state
+  #        | nodes: List.delete(state.nodes, old_node)
+  #      }}
+  #   else
+  #     {:noreply, state}
+  #   end
+  # end
 
   # Handle synchronous calls to get the state of the server
   @doc """
