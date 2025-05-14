@@ -77,6 +77,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
     GenServer.call(server, {:remove_node, old_node})
   end
 
+  def deliver_to_causal(server \\ __MODULE__, msg) do
+    GenServer.cast(server, msg)
+  end
+
   @doc """
   Initializes the CausalBroadcast server with the given options.
   The options should include `:my_id` (the ID of the current node) and `:nodes` (a list of known nodes).
@@ -160,10 +164,12 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.increment(state.t, state.my_id)
     Logger.debug("[#{node()}] BROADCASTING #{inspect(msg)} with VC: #{inspect(new_t)}")
 
-    for node <- state.nodes do
-      GenServer.cast({__MODULE__, node}, {:message, msg, state.my_id, new_t})
-    end
+    echo_wave =
+      Application.get_env(:p2p_docs, :echo_wave)[:module] ||
+        P2PDocs.Network.EchoWave
 
+    msg = {:message, msg, state.my_id, new_t}
+    echo_wave.start_echo_wave(msg)
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
     {:noreply, %{state | t: new_t}}
