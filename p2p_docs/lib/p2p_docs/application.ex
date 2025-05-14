@@ -35,8 +35,8 @@ defmodule P2PDocs.Application do
     node_id = if Mix.env() == :test, do: :test_node, else: node()
 
     [
-      {@api_server, []},
-      {@neighbor_handler, []},
+      #{@api_server, []},
+      #{@neighbor_handler, []},
       {@causal_broadcast, [my_id: node_id]},
       {@crdt_manager, [peer_id: node_id]}
       # {Registry, keys: :unique, name: :echo_registry}
