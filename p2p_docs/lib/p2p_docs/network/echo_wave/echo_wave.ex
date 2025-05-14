@@ -13,12 +13,14 @@ defmodule P2PDocs.Network.EchoWave do
     GenServer.start_link(__MODULE__, {id, neighbors}, name: get_peer(id))
   end
 
-  def start_echo_wave(msg) do
-    GenServer.cast(__MODULE__, {:token, self(), 0, msg})
+  def start_echo_wave(id, msg) do
+    Logger.debug("EchoWave started from #{inspect(msg)}")
+    GenServer.cast(get_peer(id), {:token, self(), 0, msg})
+    Logger.debug("Message sent: #{inspect({:token, self(), 0, msg})}")
   end
 
-  def update_neighbors(neighbors) do
-    GenServer.cast(__MODULE__, {:update, neighbors})
+  def update_neighbors(id, neighbors) do
+    GenServer.cast(get_peer(id), {:update, neighbors})
   end
 
   # def get_peer(id), do: {:via, Registry, {:echo_registry, id}}
