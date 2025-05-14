@@ -1,6 +1,6 @@
 defmodule EchoWaveTest do
   use ExUnit.Case
-  alias P2PDocs.EchoWave
+  alias P2PDocs.Network.EchoWave
   alias P2PDocs.Utils
 
   @moduletag :capture_log

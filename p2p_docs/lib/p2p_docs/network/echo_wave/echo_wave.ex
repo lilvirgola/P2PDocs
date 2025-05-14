@@ -1,6 +1,7 @@
-defmodule P2PDocs.EchoWave do
+defmodule P2PDocs.Network.EchoWave do
   use GenServer
   require Logger
+  alias P2PDocs.Network
 
   defstruct id: nil,
             neighbors: nil,
@@ -30,6 +31,8 @@ defmodule P2PDocs.EchoWave do
 
   def handle_cast({:token, from, count, msg}, %__MODULE__{parent: nil} = state) do
     Logger.debug("Node #{state.id} received token for the first time, from #{inspect(from)}")
+
+    Network.CausalBroadcast.deliver_to_causal(msg)
 
     neighbors_except_parent = state.neighbors -- [from]
 
