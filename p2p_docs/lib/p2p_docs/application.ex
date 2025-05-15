@@ -7,8 +7,6 @@ defmodule P2PDocs.Application do
 
   use Application
 
-  @neighbor_handler Application.compile_env(:p2p_docs, :neighbor_handler)[:module] ||
-                      P2PDocs.Network.NeighborHandler
   @causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:module] ||
                       P2PDocs.Network.CausalBroadcast
   @ets_causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
