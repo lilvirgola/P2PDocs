@@ -21,6 +21,9 @@ defmodule P2PDocs.Application do
   @impl true
   def start(_type, _args) do
     # # Only create ETS tables if not in test environment or if needed
+    if Mix.env() != :test do
+      Node.set_cookie(node(), @cookie)
+    end
     # unless Mix.env() == :test do
     #   :ets.new(@ets_crdt_manager, [:named_table, :public, read_concurrency: true])
 

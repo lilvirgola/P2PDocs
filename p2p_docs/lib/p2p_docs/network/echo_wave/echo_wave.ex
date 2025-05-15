@@ -17,6 +17,15 @@ defmodule P2PDocs.Network.EchoWave do
     GenServer.cast(get_peer(id), {:token, self(), 0, msg})
   end
 
+  def add_neighbors(id, neighbors) do
+    GenServer.cast(get_peer(id), {:add, neighbors})
+  end
+
+  def del_neighbors(id, neighbors) do
+    GenServer.cast(get_peer(id), {:del, neighbors})
+  end
+
+
   def update_neighbors(id, neighbors) do
     GenServer.cast(get_peer(id), {:update, neighbors})
   end
@@ -76,6 +85,24 @@ defmodule P2PDocs.Network.EchoWave do
     new_state = %__MODULE__{
       state
       | neighbors: neighbors
+    }
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:add, neighbors}, state) do
+    new_state = %__MODULE__{
+      state
+      | neighbors: state.neighbors ++ neighbors
+    }
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:del, neighbors}, state) do
+    new_state = %__MODULE__{
+      state
+      | neighbors: state.neighbors -- neighbors
     }
 
     {:noreply, new_state}
