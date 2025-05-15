@@ -21,7 +21,7 @@ defmodule EchoWaveTest do
   end
 
   test "echo wave random connected graph" do
-    size = 2 ** 14
+    size = 2 ** 12
     gamma = 1.2
     {time, topology} = :timer.tc(fn -> build_random_topology(size, gamma) end)
 

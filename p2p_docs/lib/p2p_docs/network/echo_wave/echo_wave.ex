@@ -41,7 +41,7 @@ defmodule P2PDocs.Network.EchoWave do
     neighbors_except_parent = state.neighbors -- [from]
 
     Enum.each(neighbors_except_parent, fn neighbor ->
-      GenServer.cast(get_peer(neighbor), {:token, state.id, 0, msg})
+      GenServer.cast(get_peer(neighbor), {:token, {get_peer(state.id), state.id}, 0, msg})
     end)
 
     new_state = %__MODULE__{
@@ -96,7 +96,7 @@ defmodule P2PDocs.Network.EchoWave do
       else
         GenServer.cast(
           get_peer(state.parent),
-          {:token, state.id, state.count, msg}
+          {:token, {get_peer(state.id), state.id}, state.count, msg}
         )
       end
     end
