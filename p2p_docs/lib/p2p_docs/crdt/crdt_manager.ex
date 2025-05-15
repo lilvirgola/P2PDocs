@@ -47,6 +47,10 @@ defmodule P2PDocs.CRDT.Manager do
     GenServer.cast(__MODULE__, msg)
   end
 
+  def get_state() do
+    GenServer.call(__MODULE__, {:get_crdt})
+    end
+
   def add_char(n) do
     total = n
 
@@ -69,7 +73,7 @@ defmodule P2PDocs.CRDT.Manager do
   end
 
   @impl true
-  def handle_cast({:get_crdt}, state) do
+  def handle_call({:get_crdt}, _from, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is sending its state!")
     {:reply, state.crdt, state}
   end
