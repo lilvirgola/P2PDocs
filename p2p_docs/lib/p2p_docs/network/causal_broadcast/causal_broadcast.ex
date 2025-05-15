@@ -175,14 +175,14 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   @impl true
   def handle_cast({:upd_vc_and_d, {vc,d}}, state) do
-    Logger.debug("Node #{inspect(state.peer_id)} is updating its state!")
+    Logger.debug("Node #{inspect(state.my_id)} is updating its state!")
     new_state = %{
       state
       | t: vc,
         d: d
     }
     # Store the updated state in ETS
-    :ets.insert(@table_name, {state.peer_id, new_state})
+    :ets.insert(@table_name, {state.my_id, new_state})
     {:noreply, new_state}
   end
 
