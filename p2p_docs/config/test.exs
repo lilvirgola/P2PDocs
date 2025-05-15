@@ -12,7 +12,7 @@ config :p2p_docs, :causal_broadcast,
   ets_table: :causal_broadcast_state
 
 # NeighborHandler configuration
-config :p2p_docs,
+config :p2p_docs, :neighbor_handler,
   cookie: :default
 
 # CRDT Manager configuration

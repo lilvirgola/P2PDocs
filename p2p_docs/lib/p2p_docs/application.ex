@@ -15,12 +15,11 @@ defmodule P2PDocs.Application do
                   P2PDocs.CRDT.Manager
   @api_server Application.compile_env(:p2p_docs, :api)[:module] ||
                 P2PDocs.API.Server
-  @cookie Application.compile_env(:p2p_docs)[:cookie] ||
+  @cookie Application.compile_env(:p2p_docs, :neighbor_handler)[:cookie] ||
           :default
 
   @impl true
   def start(_type, _args) do
-    Node.set_cookie(node(), @cookie)
     # # Only create ETS tables if not in test environment or if needed
     # unless Mix.env() == :test do
     #   :ets.new(@ets_crdt_manager, [:named_table, :public, read_concurrency: true])
