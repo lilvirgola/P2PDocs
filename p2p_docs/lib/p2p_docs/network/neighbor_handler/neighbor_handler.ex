@@ -46,17 +46,22 @@ defmodule P2PDocs.Network.NeighborHandler do
 
  # Handles a join request from a peer
  def handle_cast({:join, peer_id}, state) do
-  if Enum.member?(state.neighbors, peer_id) do
-      Logger.debug("Node #{inspect(peer_id)} is already a neighbor.")
-      {:noreply, state}
+  if state.peer_id == peer_id do
+    Logger.debug("I am node #{inspect(peer_id)}, why should i add myself.")
+    {:noreply, state}
   else
-      new_neighbors = [peer_id | state.neighbors]
-      EchoWave.update_neighbors(new_neighbors)
-      Logger.debug("Node #{inspect(peer_id)} joined the network.")
-      new_state = %{state | neighbors: new_neighbors}
-      # Store the updated state in ETS
-      :ets.insert(@table_name, {state.peer_id, new_state})
-      {:noreply, new_state}
+    if Enum.member?(state.neighbors, peer_id) do
+        Logger.debug("Node #{inspect(peer_id)} is already a neighbor.")
+        {:noreply, state}
+    else
+        new_neighbors = [peer_id | state.neighbors]
+        EchoWave.update_neighbors(new_neighbors)
+        Logger.debug("Node #{inspect(peer_id)} joined the network.")
+        new_state = %{state | neighbors: new_neighbors}
+        # Store the updated state in ETS
+        :ets.insert(@table_name, {state.peer_id, new_state})
+        {:noreply, new_state}
+    end
   end
  end
 
