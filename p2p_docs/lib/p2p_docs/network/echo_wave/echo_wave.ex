@@ -13,21 +13,21 @@ defmodule P2PDocs.Network.EchoWave do
     GenServer.start_link(__MODULE__, {id, neighbors}, name: name)
   end
 
-  def start_echo_wave(id, msg) do
+  def start_echo_wave(msg) do
     # GenServer.cast(get_peer(id), {:token, self(), 0, msg})
-    GenServer.cast(get_peer(id), {:start, msg})
+    GenServer.cast(__MODULE__, {:start, msg})
   end
 
-  def add_neighbors(id, neighbors) do
-    GenServer.cast(get_peer(id), {:add, neighbors})
+  def add_neighbors(neighbors) do
+    GenServer.cast(__MODULE__, {:add, neighbors})
   end
 
-  def del_neighbors(id, neighbors) do
-    GenServer.cast(get_peer(id), {:del, neighbors})
+  def del_neighbors(neighbors) do
+    GenServer.cast(__MODULE__, {:del, neighbors})
   end
 
-  def update_neighbors(id, neighbors) do
-    GenServer.cast(get_peer(id), {:update, neighbors})
+  def update_neighbors(neighbors) do
+    GenServer.cast(__MODULE__, {:update, neighbors})
   end
 
   # def get_peer(id), do: {:via, Registry, {:echo_registry, id}}
@@ -45,7 +45,7 @@ defmodule P2PDocs.Network.EchoWave do
   def handle_cast({:start_echo, msg}, state) do
     Logger.debug("Node #{state.id} started Echo-Wave")
 
-    GenServer.cast(get_peer(state.id), {:token, self(), 0, msg})
+    GenServer.cast(__MODULE__, {:token, self(), 0, msg})
 
     {:noreply, state}
   end
@@ -58,7 +58,7 @@ defmodule P2PDocs.Network.EchoWave do
     neighbors_except_parent = state.neighbors -- [from]
 
     Enum.each(neighbors_except_parent, fn neighbor ->
-      GenServer.cast(get_peer(neighbor), {:token, {get_peer(state.id), state.id}, 0, msg})
+      GenServer.cast({__MODULE__, get_peer(neighbor)}, {:token, {__MODULE__, state.id}, 0, msg})
     end)
 
     new_state = %__MODULE__{
@@ -130,8 +130,8 @@ defmodule P2PDocs.Network.EchoWave do
         send(state.parent, {:tree_complete, state.id, state.count, msg})
       else
         GenServer.cast(
-          get_peer(state.parent),
-          {:token, {get_peer(state.id), state.id}, state.count, msg}
+          {__MODULE__, get_peer(state.parent)},
+          {:token, {__MODULE__, state.id}, state.count, msg}
         )
       end
     end
