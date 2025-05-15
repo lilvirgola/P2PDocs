@@ -24,3 +24,7 @@ p2p_docs-*.tar
 
 # Graphviz graph encodings and renders
 *.dot*
+
+#TXT
+
+*.txt
