@@ -276,7 +276,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   @impl true
   def handle_call({:get_vc_and_d}, _from, state) do
-    Logger.debug("Node #{inspect(state.peer_id)} is sending its state!")
+    Logger.debug("Node #{inspect(state.my_id)} is sending its vector clock and d!")
     {:reply, {state.t, state.d}, state}
   end
 
