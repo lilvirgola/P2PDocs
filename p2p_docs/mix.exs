@@ -32,10 +32,6 @@ defmodule P2PDocs.MixProject do
       {:plug_cowboy, "~> 2.6"},
       # for JSON parsing
       {:jason, "~> 1.4"},
-      # Socket acceptor pool
-      {:ranch, "~> 2.0"},
-      # Raw UDP socket support
-      {:socket, "~> 0.3"},
       # for documentation generation
       {:ex_doc, "~> 0.30", only: :dev, runtime: false}
     ]
