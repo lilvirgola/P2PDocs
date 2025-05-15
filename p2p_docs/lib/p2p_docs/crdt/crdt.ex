@@ -188,8 +188,8 @@ defmodule P2PDocs.CRDT.CrdtText do
   defp do_allocate(p, q, acc, depth, strategies, peer_id) do
     {upd_strategies, strat} = get_and_update_strategy(strategies, depth)
 
-    {ph, _} = p_hd = hd(p)
-    {qh, _} = _q_hd = hd(q)
+    {ph, pid} = p_hd = hd(p)
+    {qh, qid} = _q_hd = hd(q)
     interval = qh - ph
 
     cond do
@@ -199,13 +199,13 @@ defmodule P2PDocs.CRDT.CrdtText do
         {acc ++ [digit], upd_strategies}
 
       interval in [0, 1] ->
-        next_p = tl(p) ++ [0]
+        next_p = tl(p) ++ [{0, peer_id}]
 
         next_q =
-          if interval == 0 do
-            tl(q) ++ [base(depth + 1)]
+          if interval == 0 and pid == qid do
+            tl(q) ++ [{base(depth + 1), peer_id}]
           else
-            [base(depth + 1)]
+            [{base(depth + 1), peer_id}]
           end
 
         do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, upd_strategies, peer_id)
