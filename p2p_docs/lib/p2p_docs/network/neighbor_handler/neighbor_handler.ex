@@ -76,6 +76,6 @@ defmodule P2PDocs.Network.NeighborHandler do
         Logger.debug("Peer #{inspect(peer_id)} is already disconnected")
         {:error, "Peer already disconnected"}
    end
-   :ok
+
  end
 end
