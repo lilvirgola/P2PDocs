@@ -9,12 +9,13 @@ defmodule P2PDocs.Network.EchoWave do
             remaining: nil,
             count: 0
 
-  def start_link({id, neighbors}) do
-    GenServer.start_link(__MODULE__, {id, neighbors}, name: get_peer(id))
+  def start_link({id, neighbors}, name \\ __MODULE__) do
+    GenServer.start_link(__MODULE__, {id, neighbors}, name: name)
   end
 
   def start_echo_wave(id, msg) do
-    GenServer.cast(get_peer(id), {:token, self(), 0, msg})
+    # GenServer.cast(get_peer(id), {:token, self(), 0, msg})
+    GenServer.cast(get_peer(id), {:start, msg})
   end
 
   def add_neighbors(id, neighbors) do
@@ -24,7 +25,6 @@ defmodule P2PDocs.Network.EchoWave do
   def del_neighbors(id, neighbors) do
     GenServer.cast(get_peer(id), {:del, neighbors})
   end
-
 
   def update_neighbors(id, neighbors) do
     GenServer.cast(get_peer(id), {:update, neighbors})
@@ -40,6 +40,14 @@ defmodule P2PDocs.Network.EchoWave do
     }
 
     {:ok, state}
+  end
+
+  def handle_cast({:start_echo, msg}, state) do
+    Logger.debug("Node #{state.id} started Echo-Wave")
+
+    GenServer.cast(get_peer(state.id), {:token, self(), 0, msg})
+
+    {:noreply, state}
   end
 
   def handle_cast({:token, from, count, msg}, %__MODULE__{parent: nil} = state) do

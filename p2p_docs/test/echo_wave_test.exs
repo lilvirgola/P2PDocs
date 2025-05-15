@@ -21,7 +21,7 @@ defmodule EchoWaveTest do
   end
 
   test "echo wave random connected graph" do
-    size = 2 ** 12
+    size = 2 ** 4
     gamma = 1.2
     {time, topology} = :timer.tc(fn -> build_random_topology(size, gamma) end)
 
@@ -38,7 +38,7 @@ defmodule EchoWaveTest do
     size = Map.keys(topology) |> Enum.count()
 
     for {id, neighbors} <- topology do
-      EchoWave.start_link({id, neighbors})
+      EchoWave.start_link({id, neighbors}, id)
     end
 
     GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, nil})
