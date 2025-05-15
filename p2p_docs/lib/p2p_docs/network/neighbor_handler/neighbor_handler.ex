@@ -23,31 +23,19 @@ defmodule P2PDocs.Network.NeighborHandler do
 
  # Handles a join request from a peer
  def handle_cast({:join, peer_id}, state) do
-   case add_neighbor(peer_id) do
-      :ok ->
-        new_neighbors = [peer_id | state.neighbors]
-        EchoWave.update_neighbors(new_neighbors)
-        Logger.debug("Node #{inspect(peer_id)} joined the network.")
-        {:noreply, %{state | neighbors: new_neighbors}}
-      {:error, reason} ->
-        Logger.error("Failed to add neighbor #{inspect(peer_id)}: #{reason}")
-        {:noreply, state}
-   end
+    new_neighbors = [peer_id | state.neighbors]
+    EchoWave.update_neighbors(new_neighbors)
+    Logger.debug("Node #{inspect(peer_id)} joined the network.")
+    {:noreply, %{state | neighbors: new_neighbors}}
  end
 
  # Handles a leave request from a peer
- def handle_cast({:leave, peer_id}, state) do
-   case remove_neighbor(peer_id) do
-      :ok ->
-        new_neighbors = List.delete(state.neighbors, peer_id)
-        EchoWave.update_neighbors(new_neighbors)
-        Logger.debug("Node #{inspect(peer_id)} joined the network.")
-        {:noreply, %{state | neighbors: new_neighbors}}
-      {:error, reason} ->
-        Logger.error("Failed to add neighbor #{inspect(peer_id)}: #{reason}")
-        {:noreply, state}
-   end
- end
+  def handle_cast({:leave, peer_id}, state) do
+    new_neighbors = List.delete(state.neighbors, peer_id)
+    EchoWave.update_neighbors(new_neighbors)
+    Logger.debug("Node #{inspect(peer_id)} joined the network.")
+    {:noreply, %{state | neighbors: new_neighbors}}
+  end
 
  def add_neighbor(peer_id) do
    case Node.connect(peer_id) do
