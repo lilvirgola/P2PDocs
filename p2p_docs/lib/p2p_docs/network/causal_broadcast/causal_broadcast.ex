@@ -91,7 +91,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
   @impl true
   def init(opts) do
     my_id = Keyword.fetch!(opts, :my_id)
-    initial_nodes = Keyword.get(opts, :nodes, [my_id]) |> Enum.uniq()
 
     # Subscribe to neighbor events
     get_peer_handler =
@@ -115,7 +114,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
           # No state found in ETS, create new state
           initial_state = %State{
             my_id: my_id,
-            nodes: initial_nodes,
             t: VectorClock.new(my_id),
             d: VectorClock.new(),
             buffer: MapSet.new(),
@@ -167,9 +165,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.increment(state.t, state.my_id)
     Logger.debug("[#{node()}] BROADCASTING #{inspect(msg)} with VC: #{inspect(new_t)}")
 
-    for node <- state.nodes do
-      GenServer.cast({__MODULE__, node}, {:message, msg, state.my_id, new_t})
-    end
+    echo_msg = {:message, msg, state.my_id, new_t}
+    EchoWave.start_echo_wave(state.my_id, echo_msg)
 
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
@@ -212,7 +209,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
          d: new_d,
          buffer: remaining_buffer,
          delivery_log: state.delivery_log ++ delivered
-         delivery_log: state.delivery_log ++ delivered
      }}
   end
 
@@ -226,15 +222,15 @@ defmodule P2PDocs.Network.CausalBroadcast do
   #     new_t = VectorClock.merge(state.t, VectorClock.new(new_node))
   #     new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
 
-      # Update the ETS table with the new state
-      :ets.insert(
-        @table_name,
-        {state.my_id, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
-      )
+  #     # Update the ETS table with the new state
+  #     :ets.insert(
+  #       @table_name,
+  #       {state.my_id, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
+  #     )
 
-      {:noreply, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
-    end
-  end
+  #     {:noreply, %{state | nodes: [new_node | state.nodes], t: new_t, d: new_d}}
+  #   end
+  # end
 
   # Handle removal of nodes,
   @impl true
