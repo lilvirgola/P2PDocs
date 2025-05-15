@@ -264,15 +264,12 @@ defmodule P2PDocs.Network.CausalBroadcast do
     end
   end
 
-  # Handle synchronous calls to get the state of the server
   @doc """
   Handles synchronous calls to get the state of the server.
   This includes the vector clock, delivery counters, and pending messages.
   """
   @impl true
   def handle_call(:get_state, _from, state) do
-    [{_key, saved_state}] = :ets.lookup(@table_name, state.my_id)
-    {:reply, saved_state, state}
     [{_key, saved_state}] = :ets.lookup(@table_name, state.my_id)
     {:reply, saved_state, state}
   end
