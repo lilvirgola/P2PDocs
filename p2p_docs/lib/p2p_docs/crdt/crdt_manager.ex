@@ -75,6 +75,18 @@ defmodule P2PDocs.CRDT.Manager do
   end
 
   @impl true
+  def handle_cast({:upd_crdt, new_crdt}, state) do
+    Logger.debug("Node #{inspect(state.peer_id)} is updating its state!")
+    new_state = %__MODULE__{
+      state
+      | crdt: new_crdt
+    }
+    # Store the updated state in ETS
+    :ets.insert(@table_name, {state.peer_id, new_state})
+    {:noreply, new_state}
+  end
+
+  @impl true
   def handle_cast({:remote_insert, char}, state) do
     Logger.debug(
       "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
@@ -125,7 +137,7 @@ defmodule P2PDocs.CRDT.Manager do
 
   @impl true
   def handle_cast({:local_delete, index}, state) do
-    Logger.debug("Node #{state.id} is applying the local delete!")
+    Logger.debug("Node #{inspect(state.peer_id)} is applying the local delete!")
 
     {target_id, new_crdt} = CrdtText.delete_local(state.crdt, index)
 
