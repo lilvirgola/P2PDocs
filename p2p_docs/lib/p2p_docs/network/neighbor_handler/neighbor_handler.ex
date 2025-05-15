@@ -2,6 +2,7 @@ defmodule P2PDocs.Network.NeighborHandler do
  use GenServer
  require Logger
  alias P2PDocs.Network.EchoWave
+ alias P2PDocs.CRDT.Manager
 
  @table_name Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                 :neighbor_handler_state
@@ -12,6 +13,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     GenServer.start_link(__MODULE__, peer_id, name: __MODULE__)
   end
 
+ @impl true
   def init(my_id) do
     try do
       case :ets.lookup(@table_name, my_id) do
@@ -45,7 +47,8 @@ defmodule P2PDocs.Network.NeighborHandler do
   end
 
  # Handles a join request from a peer
- def handle_cast({:join, peer_id}, state) do
+  @impl true
+ def handle_cast({:join, peer_id, asked}, state) do
   if state.peer_id == peer_id do
     Logger.debug("I am node #{inspect(peer_id)}, why should i add myself.")
     {:noreply, state}
@@ -57,6 +60,9 @@ defmodule P2PDocs.Network.NeighborHandler do
         new_neighbors = [peer_id | state.neighbors]
         EchoWave.update_neighbors(new_neighbors)
         Logger.debug("Node #{inspect(peer_id)} joined the network.")
+        if asked == :ask do
+          GenServer.cast({Manager, peer_id}, {:upd_crdt, Manager.get_state()})
+        end
         new_state = %{state | neighbors: new_neighbors}
         # Store the updated state in ETS
         :ets.insert(@table_name, {state.peer_id, new_state})
@@ -66,6 +72,7 @@ defmodule P2PDocs.Network.NeighborHandler do
  end
 
  # Handles a leave request from a peer
+  @impl true
   def handle_cast({:leave, peer_id}, state) do
     if not Enum.member?(state.neighbors, peer_id) do
       Logger.debug("Node #{inspect(peer_id)} is already not a neighbor.")
@@ -84,8 +91,8 @@ defmodule P2PDocs.Network.NeighborHandler do
  def add_neighbor(peer_id) do
    case Node.connect(peer_id) do
      true ->
-        GenServer.cast(__MODULE__, {:join, peer_id})
-        GenServer.cast({__MODULE__, peer_id}, {:join, node()})
+        GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
+        GenServer.cast({__MODULE__, peer_id}, {:join, node(), :ask})
        :ok
      false ->
        Logger.debug("Failed to connect to peer #{inspect(peer_id)}")
@@ -96,6 +103,13 @@ defmodule P2PDocs.Network.NeighborHandler do
    end
     # Add the peer to the list of neighbo
  end
+
+ @impl true
+  def handle_call(:get_crdt, from, state) do
+    Logger.debug("Causal broadcast state sent to peer #{inspect(from)}")
+    GenServer.cast(Manager, {:upd_crdt, state.crdt})
+    {:noreply, state}
+  end
 
  def remove_neighbor(peer_id) do
    case Node.disconnect(peer_id) do
