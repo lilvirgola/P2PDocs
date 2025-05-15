@@ -58,10 +58,10 @@ defmodule P2PDocs.CRDT.Manager do
     Logger.debug(
       "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
     )
-
+    {_, new_crdt} = CrdtText.apply_remote_insert(state.crdt, char)
     new_state = %__MODULE__{
       state
-      | crdt: CrdtText.apply_remote_insert(state.crdt, char)
+      | crdt: new_crdt
     }
 
     {:noreply, new_state}
@@ -73,9 +73,11 @@ defmodule P2PDocs.CRDT.Manager do
       "Node #{inspect(state.peer_id)} is applying the remote delete of #{inspect(target_id)}!"
     )
 
+    {_, new_crdt} = CrdtText.apply_remote_delete(state.crdt, target_id)
+
     new_state = %__MODULE__{
       state
-      | crdt: CrdtText.apply_remote_delete(state.crdt, target_id)
+      | crdt: new_crdt
     }
 
     {:noreply, new_state}
