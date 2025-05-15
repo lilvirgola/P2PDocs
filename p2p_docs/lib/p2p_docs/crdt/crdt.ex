@@ -4,6 +4,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Supports local and remote insertions and deletions.
   """
 
+
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree
@@ -58,16 +59,16 @@ defmodule P2PDocs.CRDT.CrdtText do
 
   defp sentinel_markers() do
     [
-      %{id: {:__begin__, 0}, pos: [{0, "$"}], value: nil},
-      %{id: {:__end__, 0}, pos: [{@initial_base, "$"}], value: nil}
+      %{id: {:begin, 0}, pos: [{0, "$"}], value: nil},
+      %{id: {:end, 0}, pos: [{@initial_base, "$"}], value: nil}
     ]
   end
 
   defp compare_pos(a, b) do
     cond do
-      a == b -> 0
+      a > b -> 1
       a < b -> -1
-      true -> 1
+      true -> 0
     end
   end
 

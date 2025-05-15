@@ -2,7 +2,8 @@
 
 defmodule OSTree.CorrectnessTest do
   use ExUnit.Case
-  alias OSTree
+  alias P2PDocs.CRDT.OSTree
+  alias P2PDocs.Utils
 
   test "inserting values yields sorted order via kth_element/2" do
     values = [5, 1, 3, 2, 4]
@@ -16,11 +17,13 @@ defmodule OSTree.CorrectnessTest do
   end
 
   test "deleting values removes them correctly" do
-    values = Enum.to_list(1..10)
+    values = Enum.to_list(1..100)
 
     tree =
       Enum.reduce(values, OSTree.new(fn a, b -> a - b end), fn x, acc -> OSTree.insert(acc, x) end)
 
+    graph = OSTree.to_graphviz(tree)
+    Utils.Graphviz.save_dot_file(graph, "ostree_test.dot")
     tree2 = OSTree.delete(tree, 5)
 
     # Ensure 5 is gone
@@ -38,7 +41,6 @@ defmodule OSTree.CorrectnessTest do
   end
 
   test "custom comparator for descending order" do
-    comp = fn a, b -> b - a end
     values = [10, 20, 15]
 
     tree =
@@ -52,25 +54,24 @@ end
 
 defmodule OSTree.PerformanceTest do
   use ExUnit.Case
-  alias OSTree
+  alias P2PDocs.CRDT.OSTree
   alias OSTree.Node
 
-  @comp fn a, b -> a - b end
-
+  @total_elements 1_000_000
   @tag timeout: 300_000
   @tag :performance
-  test "insert 10_000 elements efficiently" do
+  test "insert #{@total_elements} elements efficiently" do
     {time, tree} =
       :timer.tc(fn ->
-        Enum.reduce(1..10_000, OSTree.new(fn a, b -> a - b end), fn x, acc ->
+        Enum.reduce(1..@total_elements, OSTree.new(fn a, b -> a - b end), fn x, acc ->
           OSTree.insert(acc, x)
         end)
       end)
 
-    IO.puts("Insertion of 10_000 elements took #{time}μs")
+    IO.puts("Insertion of #{@total_elements} elements took #{time}μs")
 
     %Node{size: s} = tree.root
-    assert s == 10_000
+    assert s == @total_elements
     # Expect under ~200ms
     # assert time < 200_000
   end

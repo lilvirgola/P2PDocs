@@ -1,14 +1,56 @@
 defmodule EchoWaveTest do
   use ExUnit.Case
-  alias EchoWave.EchoNode
+  alias P2PDocs.Network.EchoWave
+  alias P2PDocs.Utils
 
-  # Non so perchè ma qua `setup` non funziona, in un test in locale sì
-  # setup do
-  #   Registry.start_link(keys: :unique, name: :echo_registry)
-  #   :ok
-  # end
+  @moduletag :capture_log
 
-  defp build_random_topology(size) do
+  test "echo wave static topology" do
+    topology = %{
+      :a => [:b, :c],
+      :b => [:a, :d, :e],
+      :c => [:a, :e],
+      :d => [:b, :e],
+      :e => [:b, :c, :d]
+    }
+
+    Utils.Graphviz.save_dot_file(topology, "static_topology.dot")
+
+    root = :a
+    start_echo_wave(topology, root)
+  end
+
+  test "echo wave random connected graph" do
+    size = 2 ** 14
+    gamma = 1.2
+    {time, topology} = :timer.tc(fn -> build_random_topology(size, gamma) end)
+
+    IO.puts("Random graph creation with #{size} nodes: #{time} microseconds")
+
+    Utils.Graphviz.save_dot_file(topology, "random_topology.dot")
+
+    root = Map.keys(topology) |> Enum.random()
+
+    start_echo_wave(topology, root)
+  end
+
+  defp start_echo_wave(topology, root) do
+    size = Map.keys(topology) |> Enum.count()
+
+    for {id, neighbors} <- topology do
+      EchoWave.start_link({id, neighbors})
+    end
+
+    GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, nil})
+
+    {time, value} =
+      :timer.tc(fn -> assert_receive {:tree_complete, ^root, ^size, _}, 10 * size end)
+
+    IO.puts("Echo Wave on #{size} nodes: #{time} microseconds")
+    value
+  end
+
+  defp build_random_topology(size, gamma) do
     nodes = Enum.map(1..size, fn i -> String.to_atom("n#{i}") end)
 
     # Build a spanning tree
@@ -19,7 +61,9 @@ defmodule EchoWaveTest do
       |> Enum.map(fn [a, b] -> {a, b} end)
 
     # Add some random extra edges
-    extra_edges = for a <- nodes, b <- nodes, a < b, :rand.uniform() < 0.2, do: {a, b}
+    extra_edges =
+      for a <- nodes, b <- nodes, a < b, :rand.uniform() < 1 / size ** gamma, do: {a, b}
+
     edges = Enum.uniq(tree_edges ++ extra_edges)
 
     Map.new(nodes, fn n ->
@@ -32,41 +76,5 @@ defmodule EchoWaveTest do
 
       {n, neighbors}
     end)
-  end
-
-  defp start_echo_wave(topology, root) do
-    for {id, neighbors} <- topology do
-      EchoNode.start_link({id, neighbors})
-    end
-
-    GenServer.cast(EchoNode.via_tuple(root), {:token, self(), 0})
-  end
-
-  test "echo wave static topology" do
-    topology = %{
-      :a => [:b, :c],
-      :b => [:a, :d, :e],
-      :c => [:a, :e],
-      :d => [:b, :e],
-      :e => [:b, :c, :d]
-    }
-
-    EchoWave.Graphviz.save_dot_file(topology, "static_topology.dot")
-
-    root = :a
-    size = Map.keys(topology) |> Enum.count()
-    start_echo_wave(topology, root)
-    assert_receive {:tree_complete, ^root, ^size}, 1_000
-  end
-
-  test "echo wave random connected graph" do
-    topology = build_random_topology(16)
-
-    EchoWave.Graphviz.save_dot_file(topology, "random_topology.dot")
-
-    root = Map.keys(topology) |> Enum.random()
-    size = Map.keys(topology) |> Enum.count()
-    start_echo_wave(topology, root)
-    assert_receive {:tree_complete, ^root, ^size}, 2_000
   end
 end

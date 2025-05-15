@@ -3,8 +3,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   # this can be replaced with a more efficient implementation later
   alias P2PDocs.Network.NaiveVectorClock, as: VectorClock
+  alias P2PDocs.Network.EchoWave
   require Logger
 
+  @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
+                :causal_broadcast_state
   @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
                 :causal_broadcast_state
 
@@ -19,7 +22,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
     """
     defstruct [
       :my_id,
-      :nodes,
       # Vector clock
       t: %{},
       # Delivery counters
@@ -77,6 +79,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
     GenServer.call(server, {:remove_node, old_node})
   end
 
+  def deliver_to_causal(server \\ __MODULE__, msg) do
+    GenServer.cast(server, msg)
+  end
+
   @doc """
   Initializes the CausalBroadcast server with the given options.
   The options should include `:my_id` (the ID of the current node) and `:nodes` (a list of known nodes).
@@ -102,6 +108,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
           Logger.info("State found in ETS: #{inspect(state)}")
           # restore the state from ETS
           {:ok, state}
+
 
         [] ->
           Logger.info("No state found in ETS, creating new state")
@@ -129,25 +136,25 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   # Handle info messages from the neighbor handler part
 
-  @doc """
-  Handles incoming messages from the neighbor handler.
-  This includes messages about discovered and expired peers.
-  """
-  @impl true
-  def handle_info({:peer_discovered, %{name: node_name} = peer}, state) do
-    Logger.info("Peer discovered: #{inspect(peer)}")
-    new_node = String.to_existing_atom(node_name)
-    GenServer.cast(__MODULE__, {:add_node, new_node})
-    {:noreply, state}
-  end
+  # @doc """
+  # Handles incoming messages from the neighbor handler.
+  # This includes messages about discovered and expired peers.
+  # """
+  # @impl true
+  # def handle_info({:peer_discovered, %{name: node_name} = peer}, state) do
+  #   Logger.info("Peer discovered: #{inspect(peer)}")
+  #   new_node = String.to_existing_atom(node_name)
+  #   GenServer.cast(__MODULE__, {:add_node, new_node})
+  #   {:noreply, state}
+  # end
 
-  @impl true
-  def handle_info({:peer_expired, %{name: node_name} = peer}, state) do
-    Logger.info("Peer expired: #{inspect(peer)}")
-    old_node = String.to_existing_atom(node_name)
-    GenServer.cast(__MODULE__, {:remove_node, old_node})
-    {:noreply, state}
-  end
+  # @impl true
+  # def handle_info({:peer_expired, %{name: node_name} = peer}, state) do
+  #   Logger.info("Peer expired: #{inspect(peer)}")
+  #   old_node = String.to_existing_atom(node_name)
+  #   GenServer.cast(__MODULE__, {:remove_node, old_node})
+  #   {:noreply, state}
+  # end
 
   # Handle cast messages for broadcasting and receiving messages
 
@@ -193,6 +200,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
       @table_name,
       {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}
     )
+    :ets.insert(
+      @table_name,
+      {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}
+    )
 
     {:noreply,
      %{
@@ -201,18 +212,19 @@ defmodule P2PDocs.Network.CausalBroadcast do
          d: new_d,
          buffer: remaining_buffer,
          delivery_log: state.delivery_log ++ delivered
+         delivery_log: state.delivery_log ++ delivered
      }}
   end
 
-  @impl true
-  def handle_cast({:add_node, new_node}, state) do
-    if new_node in state.nodes do
-      # Already exists
-      {:noreply, state}
-    else
-      # Initialize clocks for new node WITHOUT incrementing
-      new_t = VectorClock.merge(state.t, VectorClock.new(new_node))
-      new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
+  # @impl true
+  # def handle_cast({:add_node, new_node}, state) do
+  #   if new_node in state.nodes do
+  #     # Already exists
+  #     {:noreply, state}
+  #   else
+  #     # Initialize clocks for new node WITHOUT incrementing
+  #     new_t = VectorClock.merge(state.t, VectorClock.new(new_node))
+  #     new_d = VectorClock.merge(state.d, VectorClock.new(new_node))
 
       # Update the ETS table with the new state
       :ets.insert(
@@ -250,6 +262,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
   """
   @impl true
   def handle_call(:get_state, _from, state) do
+    [{_key, saved_state}] = :ets.lookup(@table_name, state.my_id)
+    {:reply, saved_state, state}
     [{_key, saved_state}] = :ets.lookup(@table_name, state.my_id)
     {:reply, saved_state, state}
   end

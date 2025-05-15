@@ -26,7 +26,7 @@ defmodule P2PDocs.Application do
 
     # end
     :ets.new(@ets_causal_broadcast, [:named_table, :public, read_concurrency: true])
-    IO.inspect(@neighbor_handler, label: "ACTUAL NEIGHBOR HANDLER MODULE")
+    # IO.inspect(@neighbor_handler, label: "ACTUAL NEIGHBOR HANDLER MODULE")
 
     Supervisor.start_link(children(), strategy: :one_for_one, name: P2PDocs.Supervisor)
   end
@@ -35,11 +35,12 @@ defmodule P2PDocs.Application do
     node_id = if Mix.env() == :test, do: :test_node, else: node()
 
     [
-      {@api_server, []},
-      {@neighbor_handler, []},
+      # {@api_server, []},
+      # {@neighbor_handler, []},
       {@causal_broadcast, [my_id: node_id]},
       {@crdt_manager, [peer_id: node_id]},
-      {Registry, keys: :unique, name: :echo_registry}
+      {P2PDocs.Network.EchoWave, {node_id, []}}
+      # {Registry, keys: :unique, name: :echo_registry}
     ]
   end
 end
