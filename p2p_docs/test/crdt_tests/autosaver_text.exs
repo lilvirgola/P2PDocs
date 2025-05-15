@@ -10,7 +10,7 @@ defmodule AutoSaverTest do
       "/tmp/autosaver_test_#{:erlang.unique_integer([:positive])}.txt"
 
     # Ensure the file is removed after the test
-    on_exit(fn -> File.rm(path) end)
+     on_exit(fn -> File.rm(path) end)
     {:ok, path: path}
   end
 
