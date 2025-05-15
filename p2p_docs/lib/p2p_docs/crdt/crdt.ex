@@ -21,8 +21,8 @@ defmodule P2PDocs.CRDT.CrdtText do
             counter: 1
 
   @type char_id :: {String.t(), non_neg_integer()}
-  @type pos_digit :: non_neg_integer()
-  @type position :: {[pos_digit()], String.t()}
+  @type pos_digit :: {non_neg_integer(), String.t()}
+  @type position :: [pos_digit()]
   @type crdt_char :: %{id: char_id(), pos: position(), value: binary()}
   @type t :: %CRDT{
           chars: OSTree.t(),
@@ -182,22 +182,21 @@ defmodule P2PDocs.CRDT.CrdtText do
   # -----------------------------------------------------------------------
 
   @spec allocate_position(position(), position(), map(), String.t()) :: {position(), map()}
-  defp allocate_position({p, _}, {q, _}, strategies, peer_id) do
-    {pos, upd_strategies} = do_allocate(p, q, [], 1, strategies)
-    {{pos, peer_id}, upd_strategies}
+  defp allocate_position(p, q, strategies, peer_id) do
+    do_allocate(p, q, [], 1, strategies, peer_id)
   end
 
-  defp do_allocate(p, q, acc, depth, strategies) do
+  defp do_allocate(p, q, acc, depth, strategies, peer_id) do
     {upd_strategies, strat} = get_and_update_strategy(strategies, depth)
 
-    ph = hd(p)
-    qh = hd(q)
+    {ph, _} = p_hd = hd(p)
+    {qh, _} = _q_hd = hd(q)
     interval = qh - ph
 
     cond do
       interval > 1 ->
         step = min(interval - 1, @boundary)
-        digit = compute_digit(ph, qh, step, strat)
+        digit = compute_digit(ph, qh, step, strat, peer_id)
         {acc ++ [digit], upd_strategies}
 
       interval in [0, 1] ->
@@ -210,7 +209,7 @@ defmodule P2PDocs.CRDT.CrdtText do
             [base(depth + 1)]
           end
 
-        do_allocate(next_p, next_q, acc ++ [ph], depth + 1, upd_strategies)
+        do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, upd_strategies, peer_id)
 
       true ->
         raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
@@ -238,11 +237,11 @@ defmodule P2PDocs.CRDT.CrdtText do
     @initial_base <<< (depth - 1)
   end
 
-  defp compute_digit(left, _, step, :plus) do
-    left + :rand.uniform(step)
+  defp compute_digit(left, _, step, :plus, peer_id) do
+    {left + :rand.uniform(step), peer_id}
   end
 
-  defp compute_digit(_, right, step, :minus) do
-    right - :rand.uniform(step)
+  defp compute_digit(_, right, step, :minus, peer_id) do
+    {right - :rand.uniform(step), peer_id}
   end
 end
