@@ -4,6 +4,9 @@ defmodule P2PDocs.CRDT.Manager do
 
   alias P2PDocs.CRDT.CrdtText, as: CrdtText
 
+   @table_name Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] ||
+                      :crdt_manager_state
+
   defstruct peer_id: nil,
             crdt: nil
 
@@ -12,13 +15,32 @@ defmodule P2PDocs.CRDT.Manager do
   end
 
   @impl true
-  def init(id) do
-    state = %__MODULE__{
-      peer_id: id,
-      crdt: CrdtText.new(id)
-    }
+  def init(my_id) do
+    try do
+      case :ets.lookup(@table_name, my_id) do
+        [{_key, state}] ->
+          # State found in ETS, return it
+          Logger.info("State found in ETS: #{inspect(state)}")
+          # restore the state from ETS
+          {:ok, state}
 
-    {:ok, state}
+
+        [] ->
+          Logger.info("No state found in ETS, creating new state")
+          # No state found in ETS, create new state
+          initial_state = %__MODULE__{
+            peer_id: my_id,
+            crdt: CrdtText.new(my_id)
+          }
+          # Store the initial state in the ETS table
+          :ets.insert(@table_name, {my_id, initial_state})
+          {:ok, initial_state}
+      end
+    catch
+      :error, :badarg ->
+        Logger.error("ETS table not found")
+        {:stop, :badarg}
+    end
   end
 
   def receive(msg) do
@@ -62,7 +84,8 @@ defmodule P2PDocs.CRDT.Manager do
       state
       | crdt: new_crdt
     }
-
+    # Store the updated state in ETS
+    :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
   end
 
@@ -78,7 +101,8 @@ defmodule P2PDocs.CRDT.Manager do
       state
       | crdt: new_crdt
     }
-
+    # Store the updated state in ETS
+    :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
   end
 
@@ -94,7 +118,8 @@ defmodule P2PDocs.CRDT.Manager do
     }
 
     P2PDocs.Network.CausalBroadcast.broadcast({:remote_insert, new_char})
-
+    # Store the updated state in ETS
+    :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
   end
 
@@ -110,7 +135,8 @@ defmodule P2PDocs.CRDT.Manager do
     }
 
     P2PDocs.Network.CausalBroadcast.broadcast({:remote_delete, target_id})
-
+    # Store the updated state in ETS
+    :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
   end
 

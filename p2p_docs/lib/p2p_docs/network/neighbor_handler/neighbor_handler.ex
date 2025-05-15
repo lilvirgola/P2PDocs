@@ -3,18 +3,41 @@ defmodule P2PDocs.Network.NeighborHandler do
  require Logger
  alias P2PDocs.Network.EchoWave
 
+ @table_name Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
+                :neighbor_handler_state
+
 
  # GenServer API
   def start_link(peer_id) do
     GenServer.start_link(__MODULE__, peer_id, name: __MODULE__)
   end
 
-  def init(peer_id) do
-    state = %{
-      peer_id: peer_id,
-      neighbors: []
-    }
-    {:ok, state}
+  def init(my_id) do
+    try do
+      case :ets.lookup(@table_name, my_id) do
+        [{_key, state}] ->
+          # State found in ETS, return it
+          Logger.info("State found in ETS: #{inspect(state)}")
+          # restore the state from ETS
+          {:ok, state}
+
+
+        [] ->
+          Logger.info("No state found in ETS, creating new state")
+          # No state found in ETS, create new state
+          initial_state = %{
+            peer_id: my_id,
+            neighbors: []
+          }
+          # Store the initial state in the ETS table
+          :ets.insert(@table_name, {my_id, initial_state})
+          {:ok, initial_state}
+      end
+    catch
+      :error, :badarg ->
+        Logger.error("ETS table not found")
+        {:stop, :badarg}
+    end
   end
 
   def get_neighbors do
@@ -30,7 +53,10 @@ defmodule P2PDocs.Network.NeighborHandler do
       new_neighbors = [peer_id | state.neighbors]
       EchoWave.update_neighbors(new_neighbors)
       Logger.debug("Node #{inspect(peer_id)} joined the network.")
-      {:noreply, %{state | neighbors: new_neighbors}}
+      new_state = %{state | neighbors: new_neighbors}
+      # Store the updated state in ETS
+      :ets.insert(@table_name, {state.peer_id, new_state})
+      {:noreply, new_state}
   end
  end
 
@@ -43,7 +69,10 @@ defmodule P2PDocs.Network.NeighborHandler do
       new_neighbors = List.delete(state.neighbors, peer_id)
       EchoWave.update_neighbors(new_neighbors)
       Logger.debug("Node #{inspect(peer_id)} joined the network.")
-      {:noreply, %{state | neighbors: new_neighbors}}
+      new_state = %{state | neighbors: new_neighbors}
+      # Store the updated state in ETS
+      :ets.insert(@table_name, {state.peer_id, new_state})
+      {:noreply, new_state}
     end
   end
 
