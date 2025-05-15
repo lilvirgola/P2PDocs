@@ -8,8 +8,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
                 :causal_broadcast_state
-  @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
-                :causal_broadcast_state
 
   @moduledoc """
   This module implements our causal broadcast protocol using vector clocks.
@@ -165,7 +163,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.increment(state.t, state.my_id)
     Logger.debug("[#{node()}] BROADCASTING #{inspect(msg)} with VC: #{inspect(new_t)}")
     msg = {:message, msg, state.my_id, new_t}
-    EchoWave.start_echo_wave(msg)
+    EchoWave.start_echo_wave(new_t, msg)
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
     {:noreply, %{state | t: new_t}}
