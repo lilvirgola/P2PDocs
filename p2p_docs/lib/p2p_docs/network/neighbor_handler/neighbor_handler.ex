@@ -40,7 +40,7 @@ defmodule P2PDocs.Network.NeighborHandler do
  def add_neighbor(peer_id) do
    case Node.connect(peer_id) do
      true ->
-        GenServer.cast({__MODULE__}, {:join, peer_id})
+        GenServer.cast(__MODULE__, {:join, peer_id})
         GenServer.cast({__MODULE__, peer_id}, {:join, node()})
        :ok
      false ->
@@ -56,7 +56,7 @@ defmodule P2PDocs.Network.NeighborHandler do
  def remove_neighbor(peer_id) do
    case Node.disconnect(peer_id) do
      true ->
-        GenServer.cast({__MODULE__}, {:leave, peer_id})
+        GenServer.cast(__MODULE__, {:leave, peer_id})
         GenServer.cast({__MODULE__, peer_id}, {:leave, node()})
         :ok
      false ->
