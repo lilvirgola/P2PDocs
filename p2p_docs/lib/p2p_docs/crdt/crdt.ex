@@ -180,7 +180,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   # LSEQ-inspired allocation
   # -----------------------------------------------------------------------
 
-  @spec allocate_position(position(), position(), map()) :: {position(), map()}
+  @spec allocate_position(position(), position(), map(), String.t()) :: {position(), map()}
   defp allocate_position({p, _}, {q, _}, strategies, peer_id) do
     {do_allocate(p, q, [], 1, strategies), peer_id}
   end
@@ -199,16 +199,16 @@ defmodule P2PDocs.CRDT.CrdtText do
         {acc ++ [digit], upd_strategies}
 
       interval in [0, 1] ->
-        next_p = tl(p) ++ [{0, peer_id}]
+        next_p = tl(p) ++ [0]
 
         next_q =
           if interval == 0 do
-            tl(q) ++ [{base(depth + 1), peer_id}]
+            tl(q) ++ [base(depth + 1)]
           else
-            [{base(depth + 1), peer_id}]
+            [base(depth + 1)]
           end
 
-        do_allocate(next_p, next_q, acc ++ [ph], depth + 1, upd_strategies, peer_id)
+        do_allocate(next_p, next_q, acc ++ [ph], depth + 1, upd_strategies)
 
       true ->
         raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
