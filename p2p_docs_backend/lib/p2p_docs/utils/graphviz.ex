@@ -1,4 +1,9 @@
 defmodule P2PDocs.Utils.Graphviz do
+  @moduledoc """
+  This module provides functions to convert a topology represented as a map
+  into a Graphviz DOT format string. It also includes a function to save the
+  generated DOT string to a file.
+  """
   def to_dot(topology, opts \\ []) do
     directed = Keyword.get(opts, :directed, false)
 

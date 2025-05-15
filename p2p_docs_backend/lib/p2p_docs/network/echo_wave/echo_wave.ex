@@ -2,6 +2,11 @@ defmodule P2PDocs.Network.EchoWave do
   use GenServer
   require Logger
   alias P2PDocs.Network
+  @moduledoc """
+  This module implements the Echo-Wave algorithm for peer-to-peer communication.
+  It allows nodes to send messages to their neighbors and receive responses.
+  The Echo-Wave algorithm is a simple and efficient way to propagate messages in a network.
+  """
 
   defstruct id: nil,
             neighbors: [],
@@ -37,6 +42,9 @@ defmodule P2PDocs.Network.EchoWave do
   def get_peer(id), do: id
 
   def init({id, neighbors}) do
+    Logger.debug("Starting EchoWave module for node #{inspect(id)}")
+    Process.flag(:trap_exit, true)
+
     state = %__MODULE__{
       id: id,
       neighbors: neighbors
@@ -187,5 +195,11 @@ defmodule P2PDocs.Network.EchoWave do
         {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
       )
     end
+  end
+
+  def terminate(reason, state) do
+    Logger.debug("Terminating EchoWave process for node #{state.id} due to #{inspect(reason)}")
+    # placeholder for any cleanup tasks
+    :ok
   end
 end

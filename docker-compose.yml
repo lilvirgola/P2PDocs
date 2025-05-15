@@ -1,0 +1,8 @@
+services:
+  p2p_docs_backend:
+    build: ./p2p_docs_backend
+    container_name: p2p_docs_backend
+    network_mode: host
+    environment:
+      ERL_NODE_NAME: "node@127.0.0.1"  # override if needed
+    restart: unless-stopped

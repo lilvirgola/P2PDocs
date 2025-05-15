@@ -15,25 +15,28 @@ defmodule P2PDocs.CRDT.Manager do
   end
 
   @impl true
-  def init(my_id) do
+  def init(peer_id) do
+    Logger.debug("Starting CRDT Manager module for node #{inspect(peer_id)}")
+    Process.flag(:trap_exit, true)
+
     try do
-      case :ets.lookup(@table_name, my_id) do
+      case :ets.lookup(@table_name, peer_id) do
         [{_key, state}] ->
           # State found in ETS, return it
-          Logger.info("State found in ETS: #{inspect(state)}")
+          Logger.debug("State found in ETS: #{inspect(state)}")
           # restore the state from ETS
           {:ok, state}
 
         [] ->
-          Logger.info("No state found in ETS, creating new state")
+          Logger.debug("No state found in ETS, creating new state")
           # No state found in ETS, create new state
           initial_state = %__MODULE__{
-            peer_id: my_id,
-            crdt: CrdtText.new(my_id)
+            peer_id: peer_id,
+            crdt: CrdtText.new(peer_id)
           }
 
           # Store the initial state in the ETS table
-          :ets.insert(@table_name, {my_id, initial_state})
+          :ets.insert(@table_name, {peer_id, initial_state})
           {:ok, initial_state}
       end
     catch
@@ -170,5 +173,15 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast(_, state) do
     Logger.error("Message not valid!")
     {:noreply, state}
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    Logger.debug(
+      "Terminating CRDT Manager process for node #{inspect(state.peer_id)} due to #{inspect(reason)}"
+    )
+
+    # placeholder for any cleanup tasks
+    :ok
   end
 end

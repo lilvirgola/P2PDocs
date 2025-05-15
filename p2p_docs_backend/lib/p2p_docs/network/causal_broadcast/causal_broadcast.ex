@@ -92,6 +92,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # --> indicates that this function is an implementation of a callback defined in the GenServer behaviour more or less like @override in java
   @impl true
   def init(opts) do
+    Logger.debug("Starting CausalBroadcast module for node #{inspect(opts[:my_id])}")
+    Process.flag(:trap_exit, true)
     my_id = Keyword.fetch!(opts, :my_id)
 
     # Subscribe to neighbor events
@@ -106,12 +108,12 @@ defmodule P2PDocs.Network.CausalBroadcast do
       case :ets.lookup(@table_name, my_id) do
         [{_key, state}] ->
           # State found in ETS, return it
-          Logger.info("State found in ETS: #{inspect(state)}")
+          Logger.debug("State found in ETS: #{inspect(state)}")
           # restore the state from ETS
           {:ok, state}
 
         [] ->
-          Logger.info("No state found in ETS, creating new state")
+          Logger.debug("No state found in ETS, creating new state")
           # No state found in ETS, create new state
           initial_state = %State{
             my_id: my_id,
@@ -293,7 +295,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # This function checks if the messages in the buffer can be delivered based on the vector clocks and the current state.
 
   # """
-  # TODO: Check if this is correct, should be, like in the slides, but idk
   defp attempt_deliveries(buffer, d, my_id, delivered) do
     # For each message in the buffer, check if it can be delivered
     deliverable =
@@ -308,7 +309,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
         attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, [found | delivered])
 
       _ ->
-        Logger.info("ERROR: invalid element in buffer!")
+        Logger.debug("ERROR: invalid element in buffer!")
         {delivered, buffer, d}
     end
   end
@@ -317,7 +318,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # Checks if a message can be delivered based on the causal delivery conditions.
   # This function checks if the message's vector clock is less than or equal to the current vector clock and the delivery counter.
   # """
-  # TODO: Check if this is correct, same as above
   defp deliverable?(t_prime, sender_id, d) do
     # Check if t_prime <= d' = d[sender_id] + 1
     d_prime = VectorClock.increment(d, sender_id)
@@ -333,5 +333,15 @@ defmodule P2PDocs.Network.CausalBroadcast do
     Logger.info("Delivering message: #{inspect(msg)}")
 
     P2PDocs.CRDT.Manager.receive(msg)
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    Logger.debug(
+      "Terminating CausalBrodcast process for node #{state.my_id} due to #{inspect(reason)}"
+    )
+
+    # placeholder for any cleanup tasks
+    :ok
   end
 end

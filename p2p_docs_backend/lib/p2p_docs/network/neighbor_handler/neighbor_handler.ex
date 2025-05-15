@@ -4,6 +4,12 @@ defmodule P2PDocs.Network.NeighborHandler do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.CRDT.Manager
   alias P2PDocs.Network.CausalBroadcast
+  @moduledoc """
+  This module is responsible for handling the neighbors of a node in the P2P network.
+  It manages the state of the neighbors and handles join and leave requests.
+  It uses ETS for storing the state of the neighbors.
+  The state is stored in an ETS table, which allows for fast access and updates.
+  """
 
   @table_name Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                 :neighbor_handler_state
@@ -15,16 +21,19 @@ defmodule P2PDocs.Network.NeighborHandler do
 
   @impl true
   def init(my_id) do
+    Logger.debug("Starting NeighborHandler module for node #{inspect(my_id)}")
+    Process.flag(:trap_exit, true)
+
     try do
       case :ets.lookup(@table_name, my_id) do
         [{_key, state}] ->
           # State found in ETS, return it
-          Logger.info("State found in ETS: #{inspect(state)}")
+          Logger.debug("State found in ETS: #{inspect(state)}")
           # restore the state from ETS
           {:ok, state}
 
         [] ->
-          Logger.info("No state found in ETS, creating new state")
+          Logger.debug("No state found in ETS, creating new state")
           # No state found in ETS, create new state
           initial_state = %{
             peer_id: my_id,
@@ -59,7 +68,7 @@ defmodule P2PDocs.Network.NeighborHandler do
       else
         new_neighbors = [peer_id | state.neighbors]
         EchoWave.update_neighbors(new_neighbors)
-        Logger.debug("Node #{inspect(peer_id)} joined the network.")
+        Logger.info("Node #{inspect(peer_id)} joined the network.")
 
         if asked == :ask do
           GenServer.cast({Manager, peer_id}, {:upd_crdt, Manager.get_state()})
@@ -87,7 +96,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     else
       new_neighbors = List.delete(state.neighbors, peer_id)
       EchoWave.update_neighbors(new_neighbors)
-      Logger.debug("Node #{inspect(peer_id)} joined the network.")
+      Logger.info("Node #{inspect(peer_id)} leaved the network.")
       new_state = %{state | neighbors: new_neighbors}
       # Store the updated state in ETS
       :ets.insert(@table_name, {state.peer_id, new_state})
@@ -136,5 +145,18 @@ defmodule P2PDocs.Network.NeighborHandler do
         Logger.debug("Peer #{inspect(peer_id)} is already disconnected")
         {:error, "Peer already disconnected"}
     end
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    Logger.debug(
+      "Terminating NeighborHandler process for node #{inspect(state.peer_id)} due to #{inspect(reason)}"
+    )
+
+    for neighbor <- state.neighbors do
+      remove_neighbor(neighbor)
+    end
+
+    :ok
   end
 end
