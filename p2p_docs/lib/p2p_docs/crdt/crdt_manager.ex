@@ -43,7 +43,7 @@ defmodule P2PDocs.CRDT.Manager do
 
   @impl true
   def handle_call(:get_state, _from, state) do
-    ans = CrdtText.get_plain_text(state.crdt)
+    ans = CrdtText.to_plain_text(state.crdt)
     {:reply, ans, state}
   end
 

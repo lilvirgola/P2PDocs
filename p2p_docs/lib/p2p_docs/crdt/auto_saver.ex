@@ -8,7 +8,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
       auto = AutoSaver.insert(auto, index, value)
       auto = AutoSaver.delete(auto, index)
   """
-
+  require Logger
   alias P2PDocs.CRDT.CrdtText
 
   defstruct [
