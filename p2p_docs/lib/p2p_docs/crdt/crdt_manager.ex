@@ -28,12 +28,11 @@ defmodule P2PDocs.CRDT.Manager do
   def add_char(n) do
     total = n
 
-    Enum.reduce(1..total, 0, fn i, st ->
+    Enum.each(1..total,fn i ->
       # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
       # pick random adjacent pair
       idx = :rand.uniform(i)
       GenServer.cast(__MODULE__, {:local_insert, idx, "a" <> Integer.to_string(i)})
-      st
     end)
   end
 
