@@ -18,9 +18,9 @@ defmodule P2PDocs.Application do
   @api_server Application.compile_env(:p2p_docs, :api)[:module] ||
                 P2PDocs.API.Server
   @cookie Application.compile_env(:p2p_docs, :neighbor_handler)[:cookie] ||
-          :default
+            :default
   @ets_neighbor_handler Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
-                      :neighbor_handler_state
+                          :neighbor_handler_state
 
   @impl true
   def start(_type, _args) do
@@ -28,6 +28,7 @@ defmodule P2PDocs.Application do
     if Mix.env() != :test do
       Node.set_cookie(node(), @cookie)
     end
+
     # unless Mix.env() == :test do
     #   :ets.new(@ets_crdt_manager, [:named_table, :public, read_concurrency: true])
 

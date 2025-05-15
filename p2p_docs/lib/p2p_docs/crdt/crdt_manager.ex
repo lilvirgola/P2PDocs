@@ -4,8 +4,8 @@ defmodule P2PDocs.CRDT.Manager do
 
   alias P2PDocs.CRDT.CrdtText, as: CrdtText
 
-   @table_name Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] ||
-                      :crdt_manager_state
+  @table_name Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] ||
+                :crdt_manager_state
 
   defstruct peer_id: nil,
             crdt: nil
@@ -24,7 +24,6 @@ defmodule P2PDocs.CRDT.Manager do
           # restore the state from ETS
           {:ok, state}
 
-
         [] ->
           Logger.info("No state found in ETS, creating new state")
           # No state found in ETS, create new state
@@ -32,6 +31,7 @@ defmodule P2PDocs.CRDT.Manager do
             peer_id: my_id,
             crdt: CrdtText.new(my_id)
           }
+
           # Store the initial state in the ETS table
           :ets.insert(@table_name, {my_id, initial_state})
           {:ok, initial_state}
@@ -49,12 +49,12 @@ defmodule P2PDocs.CRDT.Manager do
 
   def get_state() do
     GenServer.call(__MODULE__, {:get_crdt})
-    end
+  end
 
   def add_char(n) do
     total = n
 
-    Enum.each(1..total,fn i ->
+    Enum.each(1..total, fn i ->
       # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
       # pick random adjacent pair
       idx = :rand.uniform(i)
@@ -81,10 +81,17 @@ defmodule P2PDocs.CRDT.Manager do
   @impl true
   def handle_cast({:upd_crdt, new_crdt}, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is updating its state!")
+
+    new_crdt_with_id = %CrdtText{
+      new_crdt
+      | peer_id: state.peer_id
+    }
+
     new_state = %__MODULE__{
       state
-      | crdt: new_crdt
+      | crdt: new_crdt_with_id
     }
+
     # Store the updated state in ETS
     :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
@@ -95,11 +102,14 @@ defmodule P2PDocs.CRDT.Manager do
     Logger.debug(
       "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
     )
+
     {_, new_crdt} = CrdtText.apply_remote_insert(state.crdt, char)
+
     new_state = %__MODULE__{
       state
       | crdt: new_crdt
     }
+
     # Store the updated state in ETS
     :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
@@ -117,6 +127,7 @@ defmodule P2PDocs.CRDT.Manager do
       state
       | crdt: new_crdt
     }
+
     # Store the updated state in ETS
     :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}

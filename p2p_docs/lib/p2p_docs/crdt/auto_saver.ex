@@ -18,7 +18,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
     :file_path
   ]
 
-    @type char_id :: {String.t(), non_neg_integer()}
+  @type char_id :: {String.t(), non_neg_integer()}
   @type pos_digit :: {non_neg_integer(), String.t()}
   @type position :: [pos_digit()]
   @type crdt_char :: %{id: char_id(), pos: position(), value: binary()}
