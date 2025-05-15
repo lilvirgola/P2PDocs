@@ -26,11 +26,12 @@ defmodule P2PDocs.Network.NeighborHandler do
   if Enum.member?(state.neighbors, peer_id) do
       Logger.debug("Node #{inspect(peer_id)} is already a neighbor.")
       {:noreply, state}
-    end
-    new_neighbors = [peer_id | state.neighbors]
-    EchoWave.update_neighbors(new_neighbors)
-    Logger.debug("Node #{inspect(peer_id)} joined the network.")
-    {:noreply, %{state | neighbors: new_neighbors}}
+  else
+      new_neighbors = [peer_id | state.neighbors]
+      EchoWave.update_neighbors(new_neighbors)
+      Logger.debug("Node #{inspect(peer_id)} joined the network.")
+      {:noreply, %{state | neighbors: new_neighbors}}
+  end
  end
 
  # Handles a leave request from a peer
@@ -38,11 +39,12 @@ defmodule P2PDocs.Network.NeighborHandler do
     if not Enum.member?(state.neighbors, peer_id) do
       Logger.debug("Node #{inspect(peer_id)} is already not a neighbor.")
       {:noreply, state}
+    else
+      new_neighbors = List.delete(state.neighbors, peer_id)
+      EchoWave.update_neighbors(new_neighbors)
+      Logger.debug("Node #{inspect(peer_id)} joined the network.")
+      {:noreply, %{state | neighbors: new_neighbors}}
     end
-    new_neighbors = List.delete(state.neighbors, peer_id)
-    EchoWave.update_neighbors(new_neighbors)
-    Logger.debug("Node #{inspect(peer_id)} joined the network.")
-    {:noreply, %{state | neighbors: new_neighbors}}
   end
 
  def add_neighbor(peer_id) do
