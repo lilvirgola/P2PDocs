@@ -50,7 +50,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
   @doc """
   Perform a local insert and auto-save if threshold is reached.
   """
-  @spec local_insert(t(), non_neg_integer(), binary()) :: t()
+  @spec local_insert(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
   def local_insert(%__MODULE__{} = auto, index, value) do
     auto
     |> update_crdt(fn crdt -> CrdtText.insert_local(crdt, index, value) end)
@@ -59,7 +59,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
   @doc """
   Perform a local delete and auto-save if threshold is reached.
   """
-  @spec local_delete(t(), non_neg_integer()) :: t()
+  @spec local_delete(t(), non_neg_integer()) :: {char_id(), t()}
   def local_delete(%__MODULE__{} = auto, index) do
     auto
     |> update_crdt(fn crdt -> CrdtText.delete_local(crdt, index) end)
@@ -85,15 +85,15 @@ defmodule P2PDocs.CRDT.AutoSaver do
 
   # Internal: apply the operation, increment count, and maybe save
   defp update_crdt(%__MODULE__{} = auto, fun) do
-    {_msg_to_pass, new_crdt} = fun.(auto.crdt)
+    {msg_to_pass, new_crdt} = fun.(auto.crdt)
     new_count = auto.change_count + 1
 
     auto = %__MODULE__{auto | crdt: new_crdt, change_count: new_count}
 
     if new_count >= auto.change_threshold do
-      trigger_save(auto)
+      {msg_to_pass, trigger_save(auto)}
     else
-      auto
+      {msg_to_pass, auto}
     end
   end
 

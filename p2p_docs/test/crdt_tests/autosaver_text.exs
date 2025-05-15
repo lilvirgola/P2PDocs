@@ -19,10 +19,10 @@ defmodule AutoSaverTest do
       crdt = CrdtText.new("peer")
       auto = AutoSaver.new(crdt, 2, path)
 
-      auto = AutoSaver.local_insert(auto, 1, "a")
+      {_, auto} = AutoSaver.local_insert(auto, 1, "a")
       refute File.exists?(path)
 
-      auto = AutoSaver.local_insert(auto, 2, "b")
+      {_, auto} = AutoSaver.local_insert(auto, 2, "b")
       assert File.exists?(path)
       assert File.read!(path) == "ab"
     end
@@ -35,7 +35,7 @@ defmodule AutoSaverTest do
       {_msg, crdt1} = CrdtText.insert_local(crdt0, 1, "x")
       auto = AutoSaver.new(crdt1, 1, path)
       # Delete at index 1 (between begin and end markers)
-      auto = AutoSaver.local_delete(auto, 1)
+      {_, auto} = AutoSaver.local_delete(auto, 1)
 
       assert File.exists?(path)
       assert File.read!(path) == ""
@@ -48,15 +48,15 @@ defmodule AutoSaverTest do
       auto = AutoSaver.new(crdt, 2, path)
 
       # First cycle
-      auto = AutoSaver.local_insert(auto, 1, "c")
-      auto = AutoSaver.local_insert(auto, 2, "d")
+      {_, auto} = AutoSaver.local_insert(auto, 1, "c")
+      {_, auto} = AutoSaver.local_insert(auto, 2, "d")
       assert File.read!(path) == "cd"
 
       # Second cycle
-      auto = AutoSaver.local_insert(auto, 3, "e")
+      {_, auto} = AutoSaver.local_insert(auto, 3, "e")
       refute File.read!(path) == "cde"
 
-      auto = AutoSaver.local_insert(auto, 4, "f")
+      {_, auto} = AutoSaver.local_insert(auto, 4, "f")
       assert File.read!(path) == "cdef"
     end
   end
