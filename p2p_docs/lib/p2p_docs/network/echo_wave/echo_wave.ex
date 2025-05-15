@@ -15,7 +15,7 @@ defmodule P2PDocs.Network.EchoWave do
 
   def start_echo_wave(msg) do
     # GenServer.cast(get_peer(id), {:token, self(), 0, msg})
-    GenServer.cast(__MODULE__, {:start, msg})
+    GenServer.cast(__MODULE__, {:start_echo, msg})
   end
 
   def add_neighbors(neighbors) do
