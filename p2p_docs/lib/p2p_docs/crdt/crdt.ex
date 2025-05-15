@@ -182,7 +182,8 @@ defmodule P2PDocs.CRDT.CrdtText do
 
   @spec allocate_position(position(), position(), map(), String.t()) :: {position(), map()}
   defp allocate_position({p, _}, {q, _}, strategies, peer_id) do
-    {do_allocate(p, q, [], 1, strategies), peer_id}
+    {pos, upd_strategies} = do_allocate(p, q, [], 1, strategies)
+    {{pos, peer_id}, upd_strategies}
   end
 
   defp do_allocate(p, q, acc, depth, strategies) do
