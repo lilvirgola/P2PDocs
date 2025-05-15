@@ -110,7 +110,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
           # restore the state from ETS
           {:ok, state}
 
-
         [] ->
           Logger.info("No state found in ETS, creating new state")
           # No state found in ETS, create new state
@@ -174,13 +173,15 @@ defmodule P2PDocs.Network.CausalBroadcast do
   end
 
   @impl true
-  def handle_cast({:upd_vc_and_d, {vc,d}}, state) do
+  def handle_cast({:upd_vc_and_d, {vc, d}}, state) do
     Logger.debug("Node #{inspect(state.my_id)} is updating its state!")
+
     new_state = %{
       state
       | t: vc,
         d: d
     }
+
     # Store the updated state in ETS
     :ets.insert(@table_name, {state.my_id, new_state})
     {:noreply, new_state}
@@ -210,6 +211,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
       @table_name,
       {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}
     )
+
     :ets.insert(
       @table_name,
       {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}

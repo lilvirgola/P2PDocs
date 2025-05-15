@@ -4,7 +4,6 @@ defmodule P2PDocs.CRDT.CrdtText do
   Supports local and remote insertions and deletions.
   """
 
-
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree
