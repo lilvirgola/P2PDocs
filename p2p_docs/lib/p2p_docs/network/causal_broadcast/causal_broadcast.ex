@@ -164,10 +164,15 @@ defmodule P2PDocs.Network.CausalBroadcast do
   def handle_cast({:broadcast, msg}, state) do
     new_t = VectorClock.increment(state.t, state.my_id)
     Logger.debug("[#{node()}] BROADCASTING #{inspect(msg)} with VC: #{inspect(new_t)}")
+<<<<<<< HEAD
 
     echo_msg = {:message, msg, state.my_id, new_t}
     EchoWave.start_echo_wave(state.my_id, echo_msg)
 
+=======
+    msg = {:message, msg, state.my_id, new_t}
+    EchoWave.start_echo_wave(state.my_id, msg)
+>>>>>>> e2874fc21516fe2b965ade896bfb4c48a32d91ea
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
     {:noreply, %{state | t: new_t}}

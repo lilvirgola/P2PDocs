@@ -14,9 +14,7 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   def start_echo_wave(id, msg) do
-    Logger.debug("EchoWave started from #{inspect(msg)}")
     GenServer.cast(get_peer(id), {:token, self(), 0, msg})
-    Logger.debug("Message sent: #{inspect({:token, self(), 0, msg})}")
   end
 
   def update_neighbors(id, neighbors) do
@@ -83,6 +81,10 @@ defmodule P2PDocs.Network.EchoWave do
     {:noreply, new_state}
   end
 
+  # def handle_call(:get_state, _from, state) do
+  #   {:reply, state, state}
+  # end
+
   defp report_back?(state, msg) do
     if Enum.empty?(state.remaining) do
       Logger.debug(
@@ -92,7 +94,10 @@ defmodule P2PDocs.Network.EchoWave do
       if is_pid(state.parent) do
         send(state.parent, {:tree_complete, state.id, state.count, msg})
       else
-        GenServer.cast(get_peer(state.parent), {:token, state.id, state.count, msg})
+        GenServer.cast(
+          get_peer(state.parent),
+          {:token, state.id, state.count, msg}
+        )
       end
     end
   end
