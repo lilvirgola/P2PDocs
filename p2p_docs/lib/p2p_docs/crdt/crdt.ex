@@ -58,8 +58,8 @@ defmodule P2PDocs.CRDT.CrdtText do
 
   defp sentinel_markers() do
     [
-      %{id: {:begin, 0}, pos: {[0], "$"}, value: nil},
-      %{id: {:end, 0}, pos: {[@initial_base], "$"}, value: nil}
+      %{id: {:begin, 0}, pos: [{0, "$"}], value: nil},
+      %{id: {:end, 0}, pos: [{@initial_base, "$"}], value: nil}
     ]
   end
 
