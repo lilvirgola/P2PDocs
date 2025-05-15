@@ -1,8 +1,9 @@
 defmodule P2PDocs.Network.NeighborHandler do
- use GenServer
- require Logger
- alias P2PDocs.Network.EchoWave
- alias P2PDocs.CRDT.Manager
+  use GenServer
+  require Logger
+  alias P2PDocs.Network.EchoWave
+  alias P2PDocs.CRDT.Manager
+  alias P2PDocs.Network.CausalBroadcast
 
  @table_name Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                 :neighbor_handler_state
@@ -62,6 +63,8 @@ defmodule P2PDocs.Network.NeighborHandler do
         Logger.debug("Node #{inspect(peer_id)} joined the network.")
         if asked == :ask do
           GenServer.cast({Manager, peer_id}, {:upd_crdt, Manager.get_state()})
+          GenServer.cast({CausalBroadcast, peer_id}, {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()})
+
         end
         new_state = %{state | neighbors: new_neighbors}
         # Store the updated state in ETS

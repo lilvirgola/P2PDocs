@@ -81,6 +81,10 @@ defmodule P2PDocs.Network.CausalBroadcast do
     GenServer.cast(server, msg)
   end
 
+  def get_vc_and_d_state() do
+    GenServer.call(__MODULE__, {:get_vc_and_d})
+  end
+
   @doc """
   Initializes the CausalBroadcast server with the given options.
   The options should include `:my_id` (the ID of the current node) and `:nodes` (a list of known nodes).
@@ -167,6 +171,19 @@ defmodule P2PDocs.Network.CausalBroadcast do
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
     {:noreply, %{state | t: new_t}}
+  end
+
+  @impl true
+  def handle_cast({:upd_vc_and_d, {vc,d}}, state) do
+    Logger.debug("Node #{inspect(state.peer_id)} is updating its state!")
+    new_state = %{
+      state
+      | t: vc,
+        d: d
+    }
+    # Store the updated state in ETS
+    :ets.insert(@table_name, {state.peer_id, new_state})
+    {:noreply, new_state}
   end
 
   @impl true
@@ -258,6 +275,12 @@ defmodule P2PDocs.Network.CausalBroadcast do
     {:reply, saved_state, state}
     [{_key, saved_state}] = :ets.lookup(@table_name, state.my_id)
     {:reply, saved_state, state}
+  end
+
+  @impl true
+  def handle_call({:get_vc_and_d}, _from, state) do
+    Logger.debug("Node #{inspect(state.peer_id)} is sending its state!")
+    {:reply, {state.t, state.d}, state}
   end
 
   @impl true
