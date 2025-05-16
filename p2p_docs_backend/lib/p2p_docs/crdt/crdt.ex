@@ -4,6 +4,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Supports local and remote insertions and deletions.
   """
 
+  require Logger
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree
@@ -195,7 +196,8 @@ defmodule P2PDocs.CRDT.CrdtText do
           end
 
         p_hd_new = if interval == 0 and pid > qid do
-          {ph, qid} # raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
+          {ph, qid}
+          Logger.warning("Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}")
           else p_hd
         end
 
