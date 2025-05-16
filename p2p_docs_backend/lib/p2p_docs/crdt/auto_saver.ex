@@ -40,20 +40,23 @@ defmodule P2PDocs.CRDT.AutoSaver do
 
   @spec apply_op(t(), CrdtText.t()) :: t()
   def apply_op(%__MODULE__{} = auto, crdt) do
-    new_count = auto.change_count + 1
-
-    auto = %__MODULE__{auto | change_count: new_count}
-
-    if new_count >= auto.change_threshold do
-      trigger_save(auto, crdt)
-    else
-      auto
+    auto
     end
-  end
+  #   new_count = auto.change_count + 1
+
+  #   auto = %__MODULE__{auto | change_count: new_count}
+
+  #   if new_count >= auto.change_threshold do
+  #     trigger_save(auto, crdt)
+  #   else
+  #     auto
+  #   end
+  # end
 
   @spec apply_state_update(t(), CrdtText.t()) :: t()
   def apply_state_update(%__MODULE__{} = auto, crdt) do
-    trigger_save(auto, crdt)
+    auto
+    # trigger_save(auto, crdt)
   end
 
   # Internal: export plain text and write to file, reset counter

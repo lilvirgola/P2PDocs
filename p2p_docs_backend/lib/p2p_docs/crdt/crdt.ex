@@ -4,6 +4,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Supports local and remote insertions and deletions.
   """
 
+  require Logger
   import Bitwise
 
   alias P2PDocs.CRDT.OSTree, as: OSTree
@@ -36,17 +37,10 @@ defmodule P2PDocs.CRDT.CrdtText do
   """
   @spec new(String.t()) :: t()
   def new(peer_id) do
-    [begin_marker, end_marker] = sentinel_markers()
-
     tree =
       OSTree.new(fn a, b -> compare_pos(a.pos, b.pos) end)
-      |> OSTree.insert(begin_marker)
-      |> OSTree.insert(end_marker)
 
-    pos_map = %{
-      begin_marker.id => begin_marker.pos,
-      end_marker.id => end_marker.pos
-    }
+    pos_map = %{}
 
     %CRDT{
       chars: tree,
@@ -54,13 +48,6 @@ defmodule P2PDocs.CRDT.CrdtText do
       strategies: %{},
       peer_id: peer_id
     }
-  end
-
-  defp sentinel_markers() do
-    [
-      %{id: {:begin, 0}, pos: [{0, "$"}], value: nil},
-      %{id: {:end, 0}, pos: [{@initial_base, "$"}], value: nil}
-    ]
   end
 
   defp compare_pos(a, b) do
@@ -76,14 +63,14 @@ defmodule P2PDocs.CRDT.CrdtText do
   """
   @spec insert_local(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
   def insert_local(state, index, value) do
-    left = get_at!(state, index)
-    right = get_at!(state, index + 1)
+    left = get_at!(state, index - 1)
+    right = get_at!(state, index)
     do_insert(state, left, right, value)
   end
 
   defp get_at!(%CRDT{chars: chars}, idx) do
     case OSTree.kth_element(chars, idx) do
-      nil -> raise ArgumentError, "Index #{idx} out of bounds"
+      nil -> %{id: "marker", pos: [], value: nil}
       val -> val
     end
   end
@@ -101,7 +88,7 @@ defmodule P2PDocs.CRDT.CrdtText do
     char = %{id: new_id, pos: new_pos, value: value}
 
     # Invariant check
-    unless left.pos < new_pos and new_pos < right.pos do
+    unless left.pos < new_pos and new_pos < right.pos or  not ((not Enum.empty?(left.pos)) and (not Enum.empty?(right.pos))) do
       raise "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
               " and #{inspect(right.pos)} does not satisfy intention preservation"
     end
@@ -121,7 +108,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   """
   @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
   def delete_local(%CRDT{} = state, index) do
-    char = get_at!(state, index + 1)
+    char = get_at!(state, index)
 
     new_chars = OSTree.delete(state.chars, char)
 
@@ -173,7 +160,7 @@ defmodule P2PDocs.CRDT.CrdtText do
 
   @spec to_plain_text(t()) :: [binary()]
   def to_plain_text(%CRDT{chars: chars}) do
-    Enum.map(OSTree.to_list(chars), fn x -> x.value end)
+    Enum.map(OSTree.to_list(chars), fn x -> x end)
   end
 
   # -----------------------------------------------------------------------
@@ -208,11 +195,13 @@ defmodule P2PDocs.CRDT.CrdtText do
             []
           end
 
-        if interval == 0 and pid > qid do
-          raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
+        p_hd_new = if interval == 0 and pid > qid do
+          {ph, qid}
+          Logger.warning("Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}")
+          else p_hd
         end
 
-        do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, upd_strategies, peer_id)
+        do_allocate(next_p, next_q, acc ++ [p_hd_new], depth + 1, upd_strategies, peer_id)
 
       true ->
         raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
@@ -236,7 +225,9 @@ defmodule P2PDocs.CRDT.CrdtText do
     end
   end
 
-  defp base(0) do 0 end
+  defp base(0) do
+    0
+  end
 
   defp base(depth) do
     @initial_base <<< (depth - 1)
@@ -250,11 +241,19 @@ defmodule P2PDocs.CRDT.CrdtText do
     {right - :rand.uniform(step), peer_id}
   end
 
-  defp head([], depth, peer_id) do {base(depth), peer_id} end
+  defp head([], depth, peer_id) do
+    {base(depth), peer_id}
+  end
 
-  defp head([h | _], _, _) do h end
+  defp head([h | _], _, _) do
+    h
+  end
 
-  defp tail([]) do [] end
+  defp tail([]) do
+    []
+  end
 
-  defp tail([_ | t]) do t end
+  defp tail([_ | t]) do
+    t
+  end
 end

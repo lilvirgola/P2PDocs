@@ -165,6 +165,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     Logger.debug(
       "Terminating NeighborHandler process for node #{inspect(state.peer_id)} due to #{inspect(reason)}"
     )
+
     for {neighbor1, i} <- Enum.with_index(state.neighbors) do
       for {neighbor2, j} <- Enum.with_index(state.neighbors) do
         if j > i do
@@ -173,6 +174,7 @@ defmodule P2PDocs.Network.NeighborHandler do
         end
       end
     end
+
     for neighbor <- state.neighbors do
       remove_neighbor(neighbor)
     end
