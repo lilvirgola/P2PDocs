@@ -210,7 +210,7 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   def terminate(reason, state) do
-    Logger.debug("Terminating EchoWave process for node #{state.id} due to #{inspect(reason)}")
+    Logger.debug("Terminating EchoWave process for node #{inspect(state)} due to #{inspect(reason)}")
     # placeholder for any cleanup tasks
     :ok
   end

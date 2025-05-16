@@ -188,8 +188,8 @@ defmodule P2PDocs.CRDT.CrdtText do
   defp do_allocate(p, q, acc, depth, strategies, peer_id) do
     {upd_strategies, strat} = get_and_update_strategy(strategies, depth)
 
-    {ph, pid} = p_hd = hd(p)
-    {qh, qid} = _q_hd = hd(q)
+    {ph, pid} = p_hd = head(p, 0, peer_id)
+    {qh, qid} = _q_hd = head(q, depth, peer_id)
     interval = qh - ph
 
     cond do
@@ -199,13 +199,13 @@ defmodule P2PDocs.CRDT.CrdtText do
         {acc ++ [digit], upd_strategies}
 
       interval in [0, 1] ->
-        next_p = tl(p) ++ [{0, peer_id}]
+        next_p = tail(p)
 
         next_q =
           if interval == 0 and pid == qid do
-            tl(q) ++ [{base(depth + 1), peer_id}]
+            tail(q)
           else
-            [{base(depth + 1), peer_id}]
+            []
           end
 
         if interval == 0 and pid > qid do
@@ -236,6 +236,8 @@ defmodule P2PDocs.CRDT.CrdtText do
     end
   end
 
+  defp base(0) do 0 end
+
   defp base(depth) do
     @initial_base <<< (depth - 1)
   end
@@ -247,4 +249,12 @@ defmodule P2PDocs.CRDT.CrdtText do
   defp compute_digit(_, right, step, :minus, peer_id) do
     {right - :rand.uniform(step), peer_id}
   end
+
+  defp head([], depth, peer_id) do {base(depth), peer_id} end
+
+  defp head([h | _], _, _) do h end
+
+  defp tail([]) do [] end
+
+  defp tail([_ | t]) do t end
 end
