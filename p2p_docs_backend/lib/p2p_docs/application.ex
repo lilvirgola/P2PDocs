@@ -64,7 +64,8 @@ defmodule P2PDocs.Application do
       {P2PDocs.Network.NeighborHandler, []},
       {@crdt_manager, [peer_id: node_id]},
       {@causal_broadcast, [my_id: node_id]},
-      {P2PDocs.Network.EchoWave, {node_id, []}}
+      {P2PDocs.Network.EchoWave, {node_id, []}},
+      {P2PDocs.Network.ReliableTransport, [node_id: node_id]}
     ]
   end
 end

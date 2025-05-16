@@ -1,7 +1,8 @@
 defmodule P2PDocs.Network.EchoWave do
   use GenServer
   require Logger
-  alias P2PDocs.Network
+  alias P2PDocs.Network.CausalBroadcast
+  alias P2PDocs.Network.ReliableTransport
 
   @moduledoc """
   This module implements the Echo-Wave algorithm for peer-to-peer communication.
@@ -63,59 +64,55 @@ defmodule P2PDocs.Network.EchoWave do
 
   def handle_cast({:token, from, wave_id, count, msg}, state) do
     new_state =
-      case state.pending_waves[wave_id] do
-        nil ->
+      case Map.pop(state.pending_waves, wave_id) do
+        {nil, pending} ->
           Logger.debug(
             "#{state.id} received #{inspect(wave_id)} token for the first time, from #{inspect(from)}"
           )
 
-          Network.CausalBroadcast.deliver_to_causal(msg)
+          CausalBroadcast.deliver_to_causal(msg)
+          children = state.neighbors -- [from]
 
-          neighbors_except_parent = state.neighbors -- [from]
+          # Enum.each(children, fn neighbor ->
+          #   ReliableTransport.send(
+          #     state.id,
+          #     get_peer(neighbor),
+          #     __MODULE__,
+          #     {:token, state.id, wave_id, 0, msg}
+          #   )
+          # end)
+          Enum.each(children, &send_token(state, &1, wave_id, msg))
 
-          Enum.each(neighbors_except_parent, fn neighbor ->
-            GenServer.cast(
-              {__MODULE__, get_peer(neighbor)},
-              {:token, state.id, wave_id, 0, msg}
-            )
-          end)
+          wave = %Wave{parent: from, remaining: children, count: count + 1}
+          %{state | pending_waves: Map.put(pending, wave_id, wave)}
 
-          %__MODULE__{
-            state
-            | pending_waves:
-                Map.put(state.pending_waves, wave_id, %Wave{
-                  parent: from,
-                  remaining: neighbors_except_parent,
-                  count: count + 1
-                })
-          }
-
-        _ ->
+        {prev = %Wave{}, pending} ->
           Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
 
-          new_remaining = state.pending_waves[wave_id].remaining -- [from]
+          updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
+          %{state | pending_waves: Map.put(pending, wave_id, updated)}
+          # _ ->
+          #   Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
 
-          %__MODULE__{
-            state
-            | pending_waves:
-                Map.update!(state.pending_waves, wave_id, fn prev_state ->
-                  %Wave{
-                    prev_state
-                    | remaining: new_remaining,
-                      count: prev_state.count + count
-                  }
-                end)
-          }
+          #   new_remaining = state.pending_waves[wave_id].remaining -- [from]
+
+          #   %__MODULE__{
+          #     state
+          #     | pending_waves:
+          #         Map.update!(state.pending_waves, wave_id, fn prev_state ->
+          #           %Wave{
+          #             prev_state
+          #             | remaining: new_remaining,
+          #               count: prev_state.count + count
+          #           }
+          #         end)
+          #   }
       end
 
     new_state =
-      if report_back?(new_state, wave_id, msg) do
+      if report_back?(new_state, wave_id) do
         Logger.debug("#{state.id} removes #{inspect(wave_id)} from its pending waves")
-
-        %__MODULE__{
-          new_state
-          | pending_waves: Map.delete(new_state.pending_waves, wave_id)
-        }
+        %{new_state | pending_waves: Map.delete(new_state.pending_waves, wave_id)}
       else
         new_state
       end
@@ -123,60 +120,17 @@ defmodule P2PDocs.Network.EchoWave do
     {:noreply, new_state}
   end
 
-  def handle_cast({:update, neighbors}, state) do
-    new_state = %__MODULE__{
-      state
-      | neighbors: neighbors
-    }
+  def handle_cast({:update, neighbors}, state), do: {:noreply, %{state | neighbors: neighbors}}
 
-    {:noreply, new_state}
-  end
+  def handle_cast({:add, neighbors}, state),
+    do: {:noreply, %{state | neighbors: state.neighbors ++ neighbors}}
 
-  def handle_cast({:add, neighbors}, state) do
-    new_state = %__MODULE__{
-      state
-      | neighbors: state.neighbors ++ neighbors
-    }
-
-    {:noreply, new_state}
-  end
-
-  def handle_cast({:del, neighbors}, state) do
-    new_state = %__MODULE__{
-      state
-      | neighbors: state.neighbors -- neighbors
-    }
-
-    {:noreply, new_state}
-  end
+  def handle_cast({:del, neighbors}, state),
+    do: {:noreply, %{state | neighbors: state.neighbors -- neighbors}}
 
   def handle_cast({:wave_complete, _, wave_id}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended")
     {:noreply, state}
-  end
-
-  defp report_back?(state, wave_id, msg) do
-    if not Enum.empty?(state.pending_waves[wave_id].remaining) do
-      false
-    else
-      Logger.debug(
-        "#{state.id} reports token back to #{inspect(state.pending_waves[wave_id].parent)} with #{state.pending_waves[wave_id].count} children"
-      )
-
-      if is_pid(state.pending_waves[wave_id].parent) do
-        GenServer.cast(
-          state.pending_waves[wave_id].parent,
-          {:wave_complete, state.id, wave_id}
-        )
-      else
-        GenServer.cast(
-          {__MODULE__, get_peer(state.pending_waves[wave_id].parent)},
-          {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
-        )
-      end
-
-      true
-    end
   end
 
   def terminate(reason, state) do
@@ -186,5 +140,63 @@ defmodule P2PDocs.Network.EchoWave do
 
     # placeholder for any cleanup tasks
     :ok
+  end
+
+  defp send_token(state, neighbor, wave_id, msg) do
+    ReliableTransport.send(
+      state.id,
+      get_peer(neighbor),
+      __MODULE__,
+      {:token, state.id, wave_id, 0, msg}
+    )
+  end
+
+  defp report_back?(state, wave_id) do
+    case Map.get(state.pending_waves, wave_id) do
+      %Wave{parent: parent, remaining: [], count: count} ->
+        Logger.debug("#{state.id} reports back to #{inspect(parent)} with #{count} children")
+        send_back(state, parent, wave_id, count)
+        true
+
+      _ ->
+        false
+    end
+
+    # if not Enum.empty?(state.pending_waves[wave_id].remaining) do
+    #   false
+    # else
+    #   Logger.debug(
+    #     "#{state.id} reports token back to #{inspect(state.pending_waves[wave_id].parent)} with #{state.pending_waves[wave_id].count} children"
+    #   )
+
+    #   if is_pid(state.pending_waves[wave_id].parent) do
+    #     GenServer.cast(
+    #       state.pending_waves[wave_id].parent,
+    #       {:wave_complete, state.id, wave_id}
+    #     )
+    #   else
+    #     Network.ReliableTransport.send(
+    #       state.id,
+    #       get_peer(state.pending_waves[wave_id].parent),
+    #       __MODULE__,
+    #       {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
+    #     )
+    #   end
+
+    #   true
+    # end
+  end
+
+  defp send_back(state, parent, wave_id, _count) when is_pid(parent) do
+    GenServer.cast(parent, {:wave_complete, state.id, wave_id})
+  end
+
+  defp send_back(state, parent, wave_id, count) do
+    ReliableTransport.send(
+      state.id,
+      get_peer(parent),
+      __MODULE__,
+      {:token, state.id, wave_id, count, nil}
+    )
   end
 end
