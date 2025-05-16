@@ -1,6 +1,7 @@
 defmodule P2PDocs.ShutdownCatcher do
   use GenServer
   require Logger
+
   @moduledoc """
   This module is responsible for catching the shutdown signal
   and performing any necessary cleanup before the application

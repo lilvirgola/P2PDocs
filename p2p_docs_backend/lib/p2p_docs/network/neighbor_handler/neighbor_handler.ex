@@ -4,6 +4,7 @@ defmodule P2PDocs.Network.NeighborHandler do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.CRDT.Manager
   alias P2PDocs.Network.CausalBroadcast
+
   @moduledoc """
   This module is responsible for handling the neighbors of a node in the P2P network.
   It manages the state of the neighbors and handles join and leave requests.

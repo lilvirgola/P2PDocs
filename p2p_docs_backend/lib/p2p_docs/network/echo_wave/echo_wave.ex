@@ -2,6 +2,7 @@ defmodule P2PDocs.Network.EchoWave do
   use GenServer
   require Logger
   alias P2PDocs.Network
+
   @moduledoc """
   This module implements the Echo-Wave algorithm for peer-to-peer communication.
   It allows nodes to send messages to their neighbors and receive responses.

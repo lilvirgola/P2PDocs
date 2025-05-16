@@ -208,9 +208,9 @@ defmodule P2PDocs.CRDT.CrdtText do
             [{base(depth + 1), peer_id}]
           end
 
-          if interval == 0 and pid > qid do
-            raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
-          end
+        if interval == 0 and pid > qid do
+          raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
+        end
 
         do_allocate(next_p, next_q, acc ++ [p_hd], depth + 1, upd_strategies, peer_id)
 
