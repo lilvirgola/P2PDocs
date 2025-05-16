@@ -173,7 +173,9 @@ defmodule P2PDocs.Network.EchoWave do
   def handle_cast({:wave_complete, _, wave_id}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended")
 
-    {:noreply, state}
+    new_state = %__MODULE__{state | pending_waves: Map.delete(state.pending_waves, wave_id)}
+
+    {:noreply, new_state}
   end
 
   defp report_back?(state, wave_id, msg) do
