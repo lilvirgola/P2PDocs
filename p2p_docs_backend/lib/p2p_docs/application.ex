@@ -61,7 +61,6 @@ defmodule P2PDocs.Application do
 
     [
       # {@api_server, []},
-      P2PDocs.ShutdownCatcher,
       {P2PDocs.Network.NeighborHandler, []},
       {@crdt_manager, [peer_id: node_id]},
       {@causal_broadcast, [my_id: node_id]},

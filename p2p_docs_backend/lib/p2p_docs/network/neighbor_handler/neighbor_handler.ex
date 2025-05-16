@@ -104,7 +104,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
-  def add_neighbor(peer_id) do
+  def join(peer_id) do
     case Node.connect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
@@ -119,15 +119,23 @@ defmodule P2PDocs.Network.NeighborHandler do
         Logger.debug("Peer #{inspect(peer_id)} is already connected")
         {:error, "Peer already connected"}
     end
-
-    # Add the peer to the list of neighbo
   end
 
-  @impl true
-  def handle_call(:get_crdt, from, state) do
-    Logger.debug("Causal broadcast state sent to peer #{inspect(from)}")
-    GenServer.cast(Manager, {:upd_crdt, state.crdt})
-    {:noreply, state}
+  def add_neighbor(peer_id) do
+    case Node.connect(peer_id) do
+      true ->
+        GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
+        GenServer.cast({__MODULE__, peer_id}, {:join, node(), :no_ask})
+        :ok
+
+      false ->
+        Logger.debug("Failed to connect to peer #{inspect(peer_id)}")
+        {:error, "Failed to connect to peer"}
+
+      :ignored ->
+        Logger.debug("Peer #{inspect(peer_id)} is already connected")
+        {:error, "Peer already connected"}
+    end
   end
 
   def remove_neighbor(peer_id) do
@@ -147,12 +155,23 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  def leave() do
+    :init.stop()
+  end
+
   @impl true
   def terminate(reason, state) do
     Logger.debug(
       "Terminating NeighborHandler process for node #{inspect(state.peer_id)} due to #{inspect(reason)}"
     )
-
+    for {neighbor1, i} <- Enum.with_index(state.neighbors) do
+      for {neighbor2, j} <- Enum.with_index(state.neighbors) do
+        if j > i do
+          GenServer.cast({__MODULE__, neighbor1}, {:join, neighbor2, :no_ask})
+          GenServer.cast({__MODULE__, neighbor2}, {:join, neighbor1, :no_ask})
+        end
+      end
+    end
     for neighbor <- state.neighbors do
       remove_neighbor(neighbor)
     end
