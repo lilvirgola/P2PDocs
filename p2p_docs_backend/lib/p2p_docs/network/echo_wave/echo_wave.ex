@@ -124,10 +124,14 @@ defmodule P2PDocs.Network.EchoWave do
 
     new_state =
       if report_back?(new_state, wave_id, msg) do
+        Logger.debug("#{state.id} removes #{inspect(wave_id)} from its pending waves")
+
         %__MODULE__{
           new_state
           | pending_waves: Map.delete(new_state.pending_waves, wave_id)
         }
+      else
+        new_state
       end
 
     {:noreply, new_state}
@@ -188,29 +192,32 @@ defmodule P2PDocs.Network.EchoWave do
   defp report_back?(state, wave_id, msg) do
     if not Enum.empty?(state.pending_waves[wave_id].remaining) do
       false
-    end
-
-    Logger.debug(
-      "#{state.id} reports token back to #{inspect(state.pending_waves[wave_id].parent)} with #{state.pending_waves[wave_id].count} children"
-    )
-
-    if is_pid(state.pending_waves[wave_id].parent) do
-      GenServer.cast(
-        state.pending_waves[wave_id].parent,
-        {:wave_complete, state.id, wave_id}
-      )
     else
-      GenServer.cast(
-        {__MODULE__, get_peer(state.pending_waves[wave_id].parent)},
-        {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
+      Logger.debug(
+        "#{state.id} reports token back to #{inspect(state.pending_waves[wave_id].parent)} with #{state.pending_waves[wave_id].count} children"
       )
-    end
 
-    true
+      if is_pid(state.pending_waves[wave_id].parent) do
+        GenServer.cast(
+          state.pending_waves[wave_id].parent,
+          {:wave_complete, state.id, wave_id}
+        )
+      else
+        GenServer.cast(
+          {__MODULE__, get_peer(state.pending_waves[wave_id].parent)},
+          {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
+        )
+      end
+
+      true
+    end
   end
 
   def terminate(reason, state) do
-    Logger.debug("Terminating EchoWave process for node #{state.id} due to #{inspect(reason)}")
+    Logger.debug(
+      "Terminating EchoWave process for node #{inspect(state)} due to #{inspect(reason)}"
+    )
+
     # placeholder for any cleanup tasks
     :ok
   end
