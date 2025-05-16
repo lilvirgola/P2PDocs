@@ -13,7 +13,7 @@ defmodule P2PDocs.Network.EchoWave do
             neighbors: [],
             pending_waves: %{}
 
-  defmodule State do
+  defmodule Wave do
     defstruct parent: nil,
               remaining: [],
               count: 0
@@ -39,7 +39,6 @@ defmodule P2PDocs.Network.EchoWave do
     GenServer.cast(__MODULE__, {:update, neighbors})
   end
 
-  # def get_peer(id), do: {:via, Registry, {:echo_registry, id}}
   def get_peer(id), do: id
 
   def init({id, neighbors}) do
@@ -81,17 +80,10 @@ defmodule P2PDocs.Network.EchoWave do
             )
           end)
 
-          # %__MODULE__{
-          #   state
-          #   | parent: from,
-          #     remaining: neighbors_except_parent,
-          #     count: count + 1
-          # }
-
           %__MODULE__{
             state
             | pending_waves:
-                Map.put(state.pending_waves, wave_id, %State{
+                Map.put(state.pending_waves, wave_id, %Wave{
                   parent: from,
                   remaining: neighbors_except_parent,
                   count: count + 1
@@ -103,17 +95,11 @@ defmodule P2PDocs.Network.EchoWave do
 
           new_remaining = state.pending_waves[wave_id].remaining -- [from]
 
-          # %__MODULE__{
-          #   state
-          #   | remaining: new_remaining,
-          #     count: state.count + count
-          # }
-
           %__MODULE__{
             state
             | pending_waves:
                 Map.update!(state.pending_waves, wave_id, fn prev_state ->
-                  %State{
+                  %Wave{
                     prev_state
                     | remaining: new_remaining,
                       count: prev_state.count + count
@@ -136,22 +122,6 @@ defmodule P2PDocs.Network.EchoWave do
 
     {:noreply, new_state}
   end
-
-  # def handle_cast({:token, from, count, msg}, state) do
-  #   Logger.debug("Node #{state.id} received token from #{inspect(from)}")
-
-  #   new_remaining = state.remaining -- [from]
-
-  #   new_state = %__MODULE__{
-  #     state
-  #     | remaining: new_remaining,
-  #       count: state.count + count
-  #   }
-
-  #   report_back?(new_state, msg)
-
-  #   {:noreply, new_state}
-  # end
 
   def handle_cast({:update, neighbors}, state) do
     new_state = %__MODULE__{
@@ -182,11 +152,7 @@ defmodule P2PDocs.Network.EchoWave do
 
   def handle_cast({:wave_complete, _, wave_id}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended")
-
-    # new_state = %__MODULE__{state | pending_waves: Map.delete(state.pending_waves, wave_id)}
-
-    new_state = state
-    {:noreply, new_state}
+    {:noreply, state}
   end
 
   defp report_back?(state, wave_id, msg) do
@@ -214,7 +180,10 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   def terminate(reason, state) do
-    Logger.debug("Terminating EchoWave process for node #{inspect(state)} due to #{inspect(reason)}")
+    Logger.debug(
+      "Terminating EchoWave process for node #{inspect(state)} due to #{inspect(reason)}"
+    )
+
     # placeholder for any cleanup tasks
     :ok
   end
