@@ -122,7 +122,13 @@ defmodule P2PDocs.Network.EchoWave do
           }
       end
 
-    report_back?(new_state, wave_id, msg)
+    new_state =
+      if report_back?(new_state, wave_id, msg) do
+        %__MODULE__{
+          new_state
+          | pending_waves: Map.delete(new_state.pending_waves, wave_id)
+        }
+      end
 
     {:noreply, new_state}
   end
@@ -173,14 +179,15 @@ defmodule P2PDocs.Network.EchoWave do
   def handle_cast({:wave_complete, _, wave_id}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended")
 
-    new_state = %__MODULE__{state | pending_waves: Map.delete(state.pending_waves, wave_id)}
+    # new_state = %__MODULE__{state | pending_waves: Map.delete(state.pending_waves, wave_id)}
 
+    new_state = state
     {:noreply, new_state}
   end
 
   defp report_back?(state, wave_id, msg) do
     if not Enum.empty?(state.pending_waves[wave_id].remaining) do
-      :ok
+      false
     end
 
     Logger.debug(
@@ -198,6 +205,8 @@ defmodule P2PDocs.Network.EchoWave do
         {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
       )
     end
+
+    true
   end
 
   def terminate(reason, state) do
