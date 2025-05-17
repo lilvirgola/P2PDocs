@@ -57,6 +57,14 @@ defmodule P2PDocs.CRDT.Manager do
     GenServer.call(__MODULE__, {:get_crdt})
   end
 
+  def local_insert(index, value) do
+    GenServer.cast(__MODULE__, {:local_insert, index, value})
+  end
+
+  def local_delete(index) do
+    GenServer.cast(__MODULE__, {:local_delete, index})
+  end
+
   def add_char(n) do
     total = n
 
