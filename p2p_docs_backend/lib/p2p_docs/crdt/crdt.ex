@@ -88,9 +88,12 @@ defmodule P2PDocs.CRDT.CrdtText do
     char = %{id: new_id, pos: new_pos, value: value}
 
     # Invariant check
-    unless left.pos < new_pos and new_pos < right.pos or  not ((not Enum.empty?(left.pos)) and (not Enum.empty?(right.pos))) do
-      raise "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
-              " and #{inspect(right.pos)} does not satisfy intention preservation"
+    unless (left.pos < new_pos and new_pos < right.pos) or Enum.empty?(left.pos) or
+             Enum.empty?(right.pos) do
+      Logger.error(
+        "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
+          " and #{inspect(right.pos)} does not satisfy intention preservation"
+      )
     end
 
     {char,
@@ -195,11 +198,16 @@ defmodule P2PDocs.CRDT.CrdtText do
             []
           end
 
-        p_hd_new = if interval == 0 and pid > qid do
-          {ph, qid}
-          Logger.warning("Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}")
-          else p_hd
-        end
+        p_hd_new =
+          if interval == 0 and pid > qid do
+            {ph, qid}
+
+            Logger.warning(
+              "Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}"
+            )
+          else
+            p_hd
+          end
 
         do_allocate(next_p, next_q, acc ++ [p_hd_new], depth + 1, upd_strategies, peer_id)
 
