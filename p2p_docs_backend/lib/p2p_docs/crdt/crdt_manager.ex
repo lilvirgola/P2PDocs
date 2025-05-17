@@ -35,7 +35,7 @@ defmodule P2PDocs.CRDT.Manager do
           initial_state = %__MODULE__{
             peer_id: peer_id,
             crdt: CrdtText.new(peer_id),
-            auto_saver: AutoSaver.new(10, inspect(peer_id) <> ".txt")
+            auto_saver: AutoSaver.new(10, "./saves/"<>inspect(peer_id) <> ".txt")
           }
 
           # Store the initial state in the ETS table

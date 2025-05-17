@@ -3,6 +3,19 @@ services:
     build: ./p2p_docs_backend
     container_name: p2p_docs_backend
     network_mode: host
+    volumes:
+      - ./files:/app/saves
     environment:
       ERL_NODE_NAME: "node@127.0.0.1"  # override if needed
     restart: unless-stopped
+
+
+  p2p_docs_frontend:
+    build: ./p2p_docs_frontend
+    container_name: p2p_docs_frontend
+    network_mode: host
+    environment:
+      MY_ENV_ENDPOINT: "p2p_docs_backend:4000"
+    restart: unless-stopped
+    depends_on:
+      - p2p_docs_backend

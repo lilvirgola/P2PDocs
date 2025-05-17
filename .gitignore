@@ -4,4 +4,6 @@
 # IDE-specific files
 .idea/
 .vscode/
+files/
+node_modules/
 *.swp

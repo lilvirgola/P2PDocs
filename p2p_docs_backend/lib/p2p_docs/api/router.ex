@@ -1,34 +1,21 @@
 defmodule P2PDocs.API.Router do
   use Plug.Router
+  import Plug.Conn
 
-  @moduledoc """
-  In this module, we define the API routes for the P2PDocs application.
-  The API allows for the retrieval and storage of documents using a simple HTTP interface.
-  """
+  plug :match
+  plug :dispatch
 
-  plug(:match)
-  plug(:dispatch)
-
-  # @doc """
-  # This route handles GET requests to retrieve a document by its ID.
-  # """
-  get "/docs/:id" do
-    id = conn.params["id"]
-    send_resp(conn, 200, Jason.encode!(id || %{}))
+  get "/ws" do
+    if get_req_header(conn, "upgrade") == ["websocket"] do
+      conn
+      |> put_resp_header("access-control-allow-origin", "*")
+      |> upgrade_adapter(:websocket, {P2PDocs.API.WebSocket.Handler, %{}})
+    else
+      send_resp(conn, 400, "WebSocket connection required")
+    end
   end
 
-  # @doc """
-  # This route handles POST requests to store a document.
-  # It expects a JSON body containing the document data.
-  # """
-  post "/docs/:id" do
-    {:ok, body, _conn} = Plug.Conn.read_body(conn)
-    {:ok, _data} = Jason.decode(body)
-    send_resp(conn, 200, "OK")
-  end
-
-  # if nothing matches the above routes, we return a 404 error
   match _ do
-    send_resp(conn, 404, "Not found")
+    send_resp(conn, 404, "Not Found")
   end
 end

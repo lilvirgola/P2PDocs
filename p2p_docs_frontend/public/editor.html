@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CRDT Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="font-sans max-w-3xl mx-auto p-5 bg-white text-gray-800">
+  <div id="connect-form" class="mb-6 p-4 bg-gray-100 rounded-md shadow">
+    <h1 class="text-xl font-semibold mb-4">Connect to P2P Network or start new file</h1>
+    <input type="text" id="peer-address" placeholder="Enter peer address (optional)"
+           class="border border-gray-300 rounded px-3 py-2 mr-2 w-full sm:w-auto mb-2 sm:mb-0" />
+    <button id="connect-btn"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2">Connect</button>
+    <button id="new-file-btn"
+            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">New File</button>
+  </div>
+
+  <div id="disconnect-form" class="mb-6 p-4 bg-gray-100 rounded-md shadow hidden">
+    <h1 class="text-xl font-semibold mb-4">Disconnect from P2P Network</h1>
+    <button id="disconnect-btn"
+            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mr-2">Disconnect</button>
+    <button id="share-btn"
+            class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Share Token</button>
+
+    <div id="token" class="mt-4 hidden">
+      <h2 class="text-lg font-medium mb-2">Token</h2>
+      <input type="text" id="token-input" readonly
+             class="border border-gray-300 rounded px-3 py-2 w-full" />
+    </div>
+  </div>
+
+  <h1 class="text-2xl font-bold mb-4">Collaborative Editor</h1>
+  <div id="editor" contenteditable="true"
+       class="border border-gray-300 p-4 min-h-[500px] rounded-md shadow focus:outline-none hidden"></div>
+
+  <script src="/env.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

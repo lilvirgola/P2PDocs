@@ -60,7 +60,7 @@ defmodule P2PDocs.Application do
     node_id = if Mix.env() == :test, do: :test_node, else: node()
 
     [
-      # {@api_server, []},
+      #{@api_server, []},
       {P2PDocs.Network.NeighborHandler, []},
       {@crdt_manager, [peer_id: node_id]},
       {@causal_broadcast, [my_id: node_id]},

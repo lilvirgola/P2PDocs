@@ -6,10 +6,17 @@ defmodule P2PDocs.API.Server do
 
   def child_spec(_) do
     Plug.Cowboy.child_spec(
-      scheme: :http,
-      plug: P2PDocs.API.Router,
-      # Default port
-      options: [port: Application.get_env(:p2p_docs, __MODULE__)[:port] || 4000]
+    scheme: :http,
+       plug: P2PDocs.API.Router,
+       options: [
+         port: 4000,
+         dispatch: [
+           {:_, [
+             {"/ws", P2PDocs.API.WebSocket.Handler, []},
+             {:_, Plug.Cowboy.Handler, {P2PDocs.API.Router, []}}
+           ]}
+         ]
+       ]
     )
   end
 end
