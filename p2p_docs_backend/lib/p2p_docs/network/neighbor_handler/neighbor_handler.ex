@@ -4,6 +4,7 @@ defmodule P2PDocs.Network.NeighborHandler do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.CRDT.Manager
   alias P2PDocs.Network.CausalBroadcast
+  alias P2PDocs.Network.ReliableTransport
 
   @moduledoc """
   This module is responsible for handling the neighbors of a node in the P2P network.
@@ -52,10 +53,6 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
-  def get_neighbors do
-    GenServer.call(__MODULE__, :get_neighbors)
-  end
-
   # Handles a join request from a peer
   @impl true
   def handle_cast({:join, peer_id, asked}, state) do
@@ -64,18 +61,40 @@ defmodule P2PDocs.Network.NeighborHandler do
       {:noreply, state}
     else
       if Enum.member?(state.neighbors, peer_id) do
-        Logger.debug("Node #{inspect(peer_id)} is already a neighbor.")
-        {:noreply, state}
+        if asked == :no_ask do
+          Logger.debug("Node #{inspect(peer_id)} is already a neighbor.")
+          {:noreply, state}
+        else
+          Logger.debug("Node #{inspect(peer_id)} is already a neighbor, but asked to update.")
+        ReliableTransport.send(
+            state.peer_id,
+            peer_id,
+            Manager,
+            {:upd_crdt, Manager.get_state()}
+          )
+          ReliableTransport.send(
+            state.peer_id,
+            peer_id,
+            CausalBroadcast,
+            {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
+          )
+        end
       else
         new_neighbors = [peer_id | state.neighbors]
         EchoWave.update_neighbors(new_neighbors)
         Logger.info("Node #{inspect(peer_id)} joined the network.")
 
         if asked == :ask do
-          GenServer.cast({Manager, peer_id}, {:upd_crdt, Manager.get_state()})
-
-          GenServer.cast(
-            {CausalBroadcast, peer_id},
+          ReliableTransport.send(
+            state.peer_id,
+            peer_id,
+            Manager,
+            {:upd_crdt, Manager.get_state()}
+          )
+          ReliableTransport.send(
+            state.peer_id,
+            peer_id,
+            CausalBroadcast,
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
@@ -109,7 +128,12 @@ defmodule P2PDocs.Network.NeighborHandler do
     case Node.connect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
-        GenServer.cast({__MODULE__, peer_id}, {:join, node(), :ask})
+        ReliableTransport.send(
+          node(),
+          peer_id,
+          __MODULE__,
+          {:join, node(), :ask}
+        )
         :ok
 
       false ->
@@ -126,7 +150,12 @@ defmodule P2PDocs.Network.NeighborHandler do
     case Node.connect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
-        GenServer.cast({__MODULE__, peer_id}, {:join, node(), :no_ask})
+        ReliableTransport.send(
+          node(),
+          peer_id,
+          __MODULE__,
+          {:join, node(), :no_ask}
+        )
         :ok
 
       false ->
@@ -143,7 +172,12 @@ defmodule P2PDocs.Network.NeighborHandler do
     case Node.disconnect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:leave, peer_id})
-        GenServer.cast({__MODULE__, peer_id}, {:leave, node()})
+        ReliableTransport.send(
+          node(),
+          peer_id,
+          __MODULE__,
+          {:leave, node()}
+        )
         :ok
 
       false ->
@@ -169,8 +203,18 @@ defmodule P2PDocs.Network.NeighborHandler do
     for {neighbor1, i} <- Enum.with_index(state.neighbors) do
       for {neighbor2, j} <- Enum.with_index(state.neighbors) do
         if j > i do
-          GenServer.cast({__MODULE__, neighbor1}, {:join, neighbor2, :no_ask})
-          GenServer.cast({__MODULE__, neighbor2}, {:join, neighbor1, :no_ask})
+          ReliableTransport.send(
+            state.peer_id,
+            neighbor1,
+            __MODULE__,
+            {:join, neighbor2, :no_ask}
+          )
+          ReliableTransport.send(
+            state.peer_id,
+            neighbor2,
+            __MODULE__,
+            {:join, neighbor1, :no_ask}
+          )
         end
       end
     end
