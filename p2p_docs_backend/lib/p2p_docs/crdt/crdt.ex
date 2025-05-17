@@ -200,7 +200,7 @@ defmodule P2PDocs.CRDT.CrdtText do
 
         p_hd_new =
           if interval == 0 and pid > qid do
-            Logger.warning(
+            _ = Logger.warning(
               "Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}"
             )
             {ph, qid}
