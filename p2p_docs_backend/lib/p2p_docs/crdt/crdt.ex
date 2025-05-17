@@ -88,8 +88,8 @@ defmodule P2PDocs.CRDT.CrdtText do
     char = %{id: new_id, pos: new_pos, value: value}
 
     # Invariant check
-    unless (left.pos < new_pos and new_pos < right.pos) or Enum.empty?(left.pos) or
-             Enum.empty?(right.pos) do
+    _ = unless (left.pos < new_pos or Enum.empty?(left.pos)) and (new_pos < right.pos or
+             Enum.empty?(right.pos)) do
       Logger.error(
         "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
           " and #{inspect(right.pos)} does not satisfy intention preservation"
@@ -163,7 +163,7 @@ defmodule P2PDocs.CRDT.CrdtText do
 
   @spec to_plain_text(t()) :: [binary()]
   def to_plain_text(%CRDT{chars: chars}) do
-    Enum.map(OSTree.to_list(chars), fn x -> x end)
+    Enum.map(OSTree.to_list(chars), fn x -> x.value end)
   end
 
   # -----------------------------------------------------------------------
@@ -192,7 +192,7 @@ defmodule P2PDocs.CRDT.CrdtText do
         next_p = tail(p)
 
         next_q =
-          if interval == 0 and pid == qid do
+          if interval == 0 and pid >= qid do
             tail(q)
           else
             []
@@ -200,11 +200,10 @@ defmodule P2PDocs.CRDT.CrdtText do
 
         p_hd_new =
           if interval == 0 and pid > qid do
-            {ph, qid}
-
             Logger.warning(
               "Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}"
             )
+            {ph, qid}
           else
             p_hd
           end

@@ -1,12 +1,7 @@
 defmodule P2PDocs.CRDT.AutoSaver do
   @moduledoc """
-  Wraps a CrdtText state and auto-saves it to a file after a configured
-  number of local changes, exporting its plain-text representation.
-
-  Usage:
-      auto = AutoSaver.new(crdt_state, 10, "/path/to/text.txt")
-      auto = AutoSaver.insert(auto, index, value)
-      auto = AutoSaver.delete(auto, index)
+  Take a CrdtText state as input and auto-saves it to a file after a configured
+  number of changes, exporting its plain-text representation.
   """
   require Logger
   alias P2PDocs.CRDT.CrdtText
@@ -25,8 +20,8 @@ defmodule P2PDocs.CRDT.AutoSaver do
 
   @doc """
   Initialize an AutoSaver with:
-    - `threshold`: number of changes before auto-save
-    - `file_path`: where to persist the plain-text output
+    - 'threshold': number of changes before auto-save
+    - 'file_path': where to persist the plain-text output
   """
   @spec new(pos_integer(), String.t()) :: t()
   def new(threshold, file_path)
@@ -68,8 +63,8 @@ defmodule P2PDocs.CRDT.AutoSaver do
   end
 
   @doc """
-  Export the CRDT as plain text and write to `file_path`.
-  Assumes `CrdtText.to_plain_text/1` returns a list of character binaries.
+  Export the CRDT as plain text and write to 'file_path'.
+  Assumes 'CrdtText.to_plain_text/1' returns a list of character binaries.
   """
   @spec save_state(CrdtText.t(), String.t()) :: :ok | {:error, any()}
   def save_state(crdt_state, file_path) do
