@@ -56,6 +56,7 @@ defmodule P2PDocs.Network.NeighborHandler do
   # Handles a join request from a peer
   @impl true
   def handle_cast({:join, peer_id, asked}, state) do
+    Logger.debug("Node #{inspect(peer_id)} is trying to join the network.")
     if state.peer_id == peer_id do
       Logger.debug("I am node #{inspect(peer_id)}, why should i add myself.")
       {:noreply, state}
@@ -66,6 +67,7 @@ defmodule P2PDocs.Network.NeighborHandler do
           {:noreply, state}
         else
           Logger.debug("Node #{inspect(peer_id)} is already a neighbor, but asked to update.")
+          Logger.
         ReliableTransport.send(
             state.peer_id,
             peer_id,

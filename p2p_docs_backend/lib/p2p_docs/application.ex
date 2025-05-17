@@ -61,7 +61,7 @@ defmodule P2PDocs.Application do
 
     [
       {@api_server, []},
-      {P2PDocs.Network.NeighborHandler, []},
+      {P2PDocs.Network.NeighborHandler, node_id},
       {@crdt_manager, [peer_id: node_id]},
       {@causal_broadcast, [my_id: node_id]},
       {P2PDocs.Network.EchoWave, {node_id, []}},
