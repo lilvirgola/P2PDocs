@@ -72,15 +72,6 @@ defmodule P2PDocs.Network.EchoWave do
 
           CausalBroadcast.deliver_to_causal(msg)
           children = state.neighbors -- [from]
-
-          # Enum.each(children, fn neighbor ->
-          #   ReliableTransport.send(
-          #     state.id,
-          #     get_peer(neighbor),
-          #     __MODULE__,
-          #     {:token, state.id, wave_id, 0, msg}
-          #   )
-          # end)
           Enum.each(children, &send_token(state, &1, wave_id, msg))
 
           wave = %Wave{parent: from, remaining: children, count: count + 1}
@@ -91,22 +82,6 @@ defmodule P2PDocs.Network.EchoWave do
 
           updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
           %{state | pending_waves: Map.put(pending, wave_id, updated)}
-          # _ ->
-          #   Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
-
-          #   new_remaining = state.pending_waves[wave_id].remaining -- [from]
-
-          #   %__MODULE__{
-          #     state
-          #     | pending_waves:
-          #         Map.update!(state.pending_waves, wave_id, fn prev_state ->
-          #           %Wave{
-          #             prev_state
-          #             | remaining: new_remaining,
-          #               count: prev_state.count + count
-          #           }
-          #         end)
-          #   }
       end
 
     new_state =
@@ -161,30 +136,6 @@ defmodule P2PDocs.Network.EchoWave do
       _ ->
         false
     end
-
-    # if not Enum.empty?(state.pending_waves[wave_id].remaining) do
-    #   false
-    # else
-    #   Logger.debug(
-    #     "#{state.id} reports token back to #{inspect(state.pending_waves[wave_id].parent)} with #{state.pending_waves[wave_id].count} children"
-    #   )
-
-    #   if is_pid(state.pending_waves[wave_id].parent) do
-    #     GenServer.cast(
-    #       state.pending_waves[wave_id].parent,
-    #       {:wave_complete, state.id, wave_id}
-    #     )
-    #   else
-    #     Network.ReliableTransport.send(
-    #       state.id,
-    #       get_peer(state.pending_waves[wave_id].parent),
-    #       __MODULE__,
-    #       {:token, state.id, wave_id, state.pending_waves[wave_id].count, msg}
-    #     )
-    #   end
-
-    #   true
-    # end
   end
 
   defp send_back(state, parent, wave_id, _count) when is_pid(parent) do
