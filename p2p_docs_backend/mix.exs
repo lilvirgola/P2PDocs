@@ -30,8 +30,10 @@ defmodule P2PDocs.MixProject do
     [
       # for API server
       {:cowboy, "~> 2.9"},
-      {:plug, "~> 1.14"},  # For the router
-      {:plug_cowboy, "~> 2.6"},  # To connect Plug with Cowboy
+      # For the router
+      {:plug, "~> 1.14"},
+      # To connect Plug with Cowboy
+      {:plug_cowboy, "~> 2.6"},
       {:jason, "~> 1.2"},
       # for documentation generation
       {:ex_doc, "~> 0.30", only: :dev, runtime: false}

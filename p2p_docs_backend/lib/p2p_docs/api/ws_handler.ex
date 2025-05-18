@@ -14,6 +14,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
       index: index,
       value: value
     }
+
     {:send, {:remote_insert, Jason.encode!(msg)}}
   end
 
@@ -23,6 +24,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
       type: "delete",
       index: index
     }
+
     {:send, {:remote_insert, Jason.encode!(msg)}}
   end
 
@@ -86,19 +88,31 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp handle_message(%{"type" => "pong"}, state) do
-
     {:reply, {:text, "{\"type\":\"ok\"}"}, state}
   end
 
-  defp handle_message(%{"char" => char, "client_id" => client_id, "index" => index, "type" => "insert", "version" => vc}, state) do
+  defp handle_message(
+         %{
+           "char" => char,
+           "client_id" => client_id,
+           "index" => index,
+           "type" => "insert",
+           "version" => vc
+         },
+         state
+       ) do
     Manager.local_insert(index, char)
     {:reply, {:text, "{\"type\":\"ok\"}"}, state}
   end
 
-  defp handle_message(%{"client_id" => client_id, "index" => index, "type" => "delete", "version" => vc}, state) do
+  defp handle_message(
+         %{"client_id" => client_id, "index" => index, "type" => "delete", "version" => vc},
+         state
+       ) do
     if index != "marker" do
-    Manager.local_delete(index)
+      Manager.local_delete(index)
     end
+
     {:reply, {:text, "{\"type\":\"ok\"}"}, state}
   end
 
@@ -117,10 +131,10 @@ defmodule P2PDocs.API.WebSocket.Handler do
             Logger.error("Failed to connect to peer #{peer_addr}: #{inspect(reason)}")
             {:reply, {:text, "{\"type\":\"error\", \"message\":\"invalid_peer_address\"}"}, state}
         end
+
       {:error, _reason} ->
         Logger.error("Invalid peer address format: #{peer_addr}")
         {:reply, {:text, "{\"type\":\"error\", \"message\":\"invalid_peer_address\"}"}, state}
-
     end
   end
 
@@ -130,15 +144,16 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp send_initial_message(state) do
-    {vc,_d}= P2PDocs.Network.CausalBroadcast.get_vc_and_d_state()
-    crdt=P2PDocs.CRDT.Manager.get_state()
+    {vc, _d} = P2PDocs.Network.CausalBroadcast.get_vc_and_d_state()
+    crdt = P2PDocs.CRDT.Manager.get_state()
     # Get the CRDT state from the CRDT Manager
-    text=
+    text =
       if crdt != nil do
         P2PDocs.CRDT.CrdtText.to_plain_text(crdt) |> Enum.join("")
       else
         ""
       end
+
     Logger.debug("Sending initial message to client: #{inspect(text)}")
 
     initial_message = %{

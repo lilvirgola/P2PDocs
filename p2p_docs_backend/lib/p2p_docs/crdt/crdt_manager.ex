@@ -35,7 +35,7 @@ defmodule P2PDocs.CRDT.Manager do
           initial_state = %__MODULE__{
             peer_id: peer_id,
             crdt: CrdtText.new(peer_id),
-            auto_saver: AutoSaver.new(10, "./saves/"<>inspect(peer_id) <> ".txt")
+            auto_saver: AutoSaver.new(10, "./saves/" <> inspect(peer_id) <> ".txt")
           }
 
           # Store the initial state in the ETS table
@@ -120,8 +120,12 @@ defmodule P2PDocs.CRDT.Manager do
       "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
     )
 
-    {_, new_crdt} = CrdtText.apply_remote_insert(state.crdt, char)
+    {pos_for_frontend, new_crdt} = CrdtText.apply_remote_insert(state.crdt, char)
     new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+
+    if pos_for_frontend do
+      P2PDocs.API.WebSocket.Handler.remote_insert(pos_for_frontend, char.value)
+    end
 
     new_state = %__MODULE__{
       state
@@ -140,8 +144,12 @@ defmodule P2PDocs.CRDT.Manager do
       "Node #{inspect(state.peer_id)} is applying the remote delete of #{inspect(target_id)}!"
     )
 
-    {_, new_crdt} = CrdtText.apply_remote_delete(state.crdt, target_id)
+    {pos_for_frontend, new_crdt} = CrdtText.apply_remote_delete(state.crdt, target_id)
     new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+
+    if pos_for_frontend do
+      P2PDocs.API.WebSocket.Handler.remote_delete(pos_for_frontend)
+    end
 
     new_state = %__MODULE__{
       state

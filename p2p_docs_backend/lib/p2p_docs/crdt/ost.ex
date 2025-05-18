@@ -78,6 +78,15 @@ defmodule P2PDocs.CRDT.OSTree do
     nil
   end
 
+  @spec index_by_element(%OSTree{}, any()) :: integer() | nil
+  def index_by_element(%OSTree{root: root, comparator: comp}, element) do
+    find_by_element(comp, root, element)
+  end
+
+  def index_by_element(_, _) do
+    nil
+  end
+
   @spec to_list(%OSTree{}) :: [any()]
   def to_list(%OSTree{root: root}) do
     inorder(root)
@@ -235,6 +244,20 @@ defmodule P2PDocs.CRDT.OSTree do
     end
   end
 
+  defp find_by_element(_, nil, _) do
+    nil
+  end
+
+  defp find_by_element(comp, %Node{value: v, left: l, right: r}, element) do
+    left_size = size(l)
+
+    case comp.(element, v) do
+      x when x < 0 -> find_by_element(comp, l, element)
+      x when x > 0 -> safe_add(left_size + 1, find_by_element(comp, r, element))
+      0 -> left_size + 1
+    end
+  end
+
   defp inorder(nil) do
     []
   end
@@ -261,5 +284,13 @@ defmodule P2PDocs.CRDT.OSTree do
           true -> []
         end
     })
+  end
+
+  defp safe_add(_, nil) do
+    nil
+  end
+
+  defp safe_add(a, b) when is_integer(a) and is_integer(b) do
+    a + b
   end
 end

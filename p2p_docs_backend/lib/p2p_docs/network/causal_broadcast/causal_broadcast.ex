@@ -253,6 +253,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     Logger.debug(
       "Terminating CausalBrodcast process for node #{state.my_id} due to #{inspect(reason)}"
     )
+
     # placeholder for any cleanup tasks
     :ok
   end

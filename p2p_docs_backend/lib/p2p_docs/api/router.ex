@@ -2,8 +2,8 @@ defmodule P2PDocs.API.Router do
   use Plug.Router
   import Plug.Conn
 
-  plug :match
-  plug :dispatch
+  plug(:match)
+  plug(:dispatch)
 
   get "/ws" do
     if get_req_header(conn, "upgrade") == ["websocket"] do

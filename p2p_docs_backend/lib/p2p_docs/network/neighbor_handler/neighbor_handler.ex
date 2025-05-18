@@ -57,6 +57,7 @@ defmodule P2PDocs.Network.NeighborHandler do
   @impl true
   def handle_cast({:join, peer_id, asked}, state) do
     Logger.debug("Node #{inspect(peer_id)} is trying to join the network.")
+
     if state.peer_id == peer_id do
       Logger.debug("I am node #{inspect(peer_id)}, why should i add myself.")
       {:noreply, state}
@@ -67,13 +68,14 @@ defmodule P2PDocs.Network.NeighborHandler do
           {:noreply, state}
         else
           Logger.debug("Node #{inspect(peer_id)} is already a neighbor, but asked to update.")
-          Logger.
-        ReliableTransport.send(
+
+          Logger.ReliableTransport.send(
             state.peer_id,
             peer_id,
             Manager,
             {:upd_crdt, Manager.get_state()}
           )
+
           ReliableTransport.send(
             state.peer_id,
             peer_id,
@@ -93,6 +95,7 @@ defmodule P2PDocs.Network.NeighborHandler do
             Manager,
             {:upd_crdt, Manager.get_state()}
           )
+
           ReliableTransport.send(
             state.peer_id,
             peer_id,
@@ -130,12 +133,14 @@ defmodule P2PDocs.Network.NeighborHandler do
     case Node.connect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
+
         ReliableTransport.send(
           node(),
           peer_id,
           __MODULE__,
           {:join, node(), :ask}
         )
+
         :ok
 
       false ->
@@ -152,12 +157,14 @@ defmodule P2PDocs.Network.NeighborHandler do
     case Node.connect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:join, peer_id, :no_ask})
+
         ReliableTransport.send(
           node(),
           peer_id,
           __MODULE__,
           {:join, node(), :no_ask}
         )
+
         :ok
 
       false ->
@@ -174,12 +181,14 @@ defmodule P2PDocs.Network.NeighborHandler do
     case Node.disconnect(peer_id) do
       true ->
         GenServer.cast(__MODULE__, {:leave, peer_id})
+
         ReliableTransport.send(
           node(),
           peer_id,
           __MODULE__,
           {:leave, node()}
         )
+
         :ok
 
       false ->
@@ -211,6 +220,7 @@ defmodule P2PDocs.Network.NeighborHandler do
             __MODULE__,
             {:join, neighbor2, :no_ask}
           )
+
           ReliableTransport.send(
             state.peer_id,
             neighbor2,

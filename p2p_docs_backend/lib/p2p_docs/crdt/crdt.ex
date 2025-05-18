@@ -88,13 +88,15 @@ defmodule P2PDocs.CRDT.CrdtText do
     char = %{id: new_id, pos: new_pos, value: value}
 
     # Invariant check
-    _ = unless (left.pos < new_pos or Enum.empty?(left.pos)) and (new_pos < right.pos or
-             Enum.empty?(right.pos)) do
-      Logger.error(
-        "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
-          " and #{inspect(right.pos)} does not satisfy intention preservation"
-      )
-    end
+    _ =
+      unless (left.pos < new_pos or Enum.empty?(left.pos)) and
+               (new_pos < right.pos or
+                  Enum.empty?(right.pos)) do
+        Logger.error(
+          "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
+            " and #{inspect(right.pos)} does not satisfy intention preservation"
+        )
+      end
 
     {char,
      %CRDT{
@@ -124,32 +126,35 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Merge a remote insert operation.
   """
-  @spec apply_remote_insert(t(), crdt_char()) :: t()
+  @spec apply_remote_insert(t(), crdt_char()) :: {integer() | nil, t()}
   def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
     unless Map.has_key?(state.pos_by_id, id) do
-      {:ok,
+      char_state = OSTree.insert(state.chars, char)
+
+      {OSTree.index_by_element(char_state, char),
        %CRDT{
          state
-         | chars: OSTree.insert(state.chars, char),
+         | chars: char_state,
            pos_by_id: Map.put(state.pos_by_id, id, pos)
        }}
     else
-      {:ok, state}
+      {OSTree.index_by_element(state.chars, char), state}
     end
   end
 
   @doc """
   Merge a remote delete operation.
   """
-  @spec apply_remote_delete(t(), char_id()) :: t()
+  @spec apply_remote_delete(t(), char_id()) :: {integer() | nil, t()}
   def apply_remote_delete(%CRDT{} = state, target_id) do
     case Map.fetch(state.pos_by_id, target_id) do
       {:ok, val} ->
         pos = val
         # id and value are not used by comparator, so they are not needed for delete
+        prev_position = OSTree.index_by_element(state.chars, %{id: nil, pos: pos, value: nil})
         new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
 
-        {:ok,
+        {prev_position,
          %CRDT{
            state
            | chars: new_chars,
@@ -157,7 +162,7 @@ defmodule P2PDocs.CRDT.CrdtText do
          }}
 
       :error ->
-        {:ok, state}
+        {nil, state}
     end
   end
 
@@ -200,9 +205,11 @@ defmodule P2PDocs.CRDT.CrdtText do
 
         p_hd_new =
           if interval == 0 and pid > qid do
-            _ = Logger.warning(
-              "Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}"
-            )
+            _ =
+              Logger.warning(
+                "Using wildcard rule between positions #{inspect(p)} and #{inspect(q)}"
+              )
+
             {ph, qid}
           else
             p_hd
