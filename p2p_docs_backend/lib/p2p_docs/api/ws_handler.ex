@@ -14,6 +14,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
       index: index,
       char: value
     }
+
     PubSub.broadcast(msg)
   end
 
@@ -23,6 +24,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
       type: "delete",
       index: index
     }
+
     PubSub.broadcast(msg)
   end
 
@@ -59,11 +61,13 @@ defmodule P2PDocs.API.WebSocket.Handler do
 
   def websocket_info({:send, msg}, state) do
     {vc, _d} = P2PDocs.Network.CausalBroadcast.get_vc_and_d_state()
-    operation= %{
+
+    operation = %{
       type: "operations",
       operations: msg,
       version: Jason.encode!(vc)
     }
+
     {:reply, {:text, Jason.encode!(operation)}, state}
   end
 
