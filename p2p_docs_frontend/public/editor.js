@@ -138,6 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Disconnect button handler
   disconnectBtn.addEventListener('click', () => {
+    const peerId = getCookie('peer_id');
+    if (peerId && peerId !== clientId) {
+      wsClient.send({ type: 'disconnect', peer_id: peerId });
+    } else {
+      wsClient.send({ type: 'disconnect' });
+    }
     clientId = null;
     pendingOperations = [];
     lastKnownVersion = 0;
@@ -146,6 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('disconnect-form').style.display = 'none';
     tokenDiv.style.display = 'none';
     editor.style.display = 'none';
+
+    // Clear the cookie
+    deleteCookie('peer_id');
   });
 
     // Share button handler
@@ -165,6 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (peerAddress) {
       wsClient.send({ type: 'connect', peer_address: peerAddress });
+      setCookie('peer_id', peerAddress, 7);
+    }
+    else {
+      setCookie('peer_id', "local", 7);
     }
     // get client ID
     wsClient.send({ type: 'get_client_id' });
@@ -210,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const range = selection.getRangeAt(0);
 
   if (e.inputType === 'insertText') {
-    const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1; // 1-based
+    const index = getCursorIndex(editor, range.startContainer, range.startOffset); // 1-based
     const operation = {
       type: 'insert',
       index: index,
@@ -290,6 +303,7 @@ function applyOperations(op) {
 }
   
   function insertAt(index, char) {
+    index = index - 1; // Convert to 0-based index
     const textNode = document.createTextNode(char);
     const range = document.createRange();
     
@@ -368,5 +382,23 @@ function applyOperations(op) {
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
+  }
+
+  // Cookie utility functions
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  function setCookie(name, value, days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    const expires = `expires=${date.toUTCString()}`;
+    document.cookie = `${name}=${value}; ${expires}; path=/`;
+  }
+
+  function deleteCookie(name) {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
   }
 });

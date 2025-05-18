@@ -131,6 +131,34 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @impl true
+  def handle_cast({:leave_all}, state) do
+    for {neighbor1, i} <- Enum.with_index(state.neighbors) do
+      for {neighbor2, j} <- Enum.with_index(state.neighbors) do
+        if j > i do
+          ReliableTransport.send(
+            state.peer_id,
+            neighbor1,
+            __MODULE__,
+            {:join, neighbor2, :no_ask}
+          )
+
+          ReliableTransport.send(
+            state.peer_id,
+            neighbor2,
+            __MODULE__,
+            {:join, neighbor1, :no_ask}
+          )
+        end
+      end
+    end
+
+    for neighbor <- state.neighbors do
+      remove_neighbor(neighbor)
+    end
+      {:noreply, state}
+  end
+
   def join(peer_id) do
     case Node.connect(peer_id) do
       true ->
@@ -202,7 +230,7 @@ defmodule P2PDocs.Network.NeighborHandler do
   end
 
   def leave() do
-    :init.restart()
+    GenServer.cast(__MODULE__, {:leave_all})
   end
 
   @impl true
@@ -237,4 +265,5 @@ defmodule P2PDocs.Network.NeighborHandler do
 
     :ok
   end
+
 end

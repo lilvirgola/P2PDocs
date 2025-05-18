@@ -2,7 +2,6 @@ defmodule P2PDocs.API.WebSocket.Handler do
   require Logger
   alias P2PDocs.CRDT.Manager
   alias P2PDocs.PubSub
-  @behaviour :cowboy_websocket_handler
 
   def init(req, state) do
     {:cowboy_websocket, req, state}
@@ -93,10 +92,10 @@ defmodule P2PDocs.API.WebSocket.Handler do
   defp handle_message(
          %{
            "char" => char,
-           "client_id" => client_id,
+           "client_id" => _client_id,
            "index" => index,
            "type" => "insert",
-           "version" => vc
+           "version" => _vc
          },
          state
        ) do
@@ -105,7 +104,39 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp handle_message(
-         %{"client_id" => client_id, "index" => index, "type" => "delete", "version" => vc},
+         %{"client_id" => _client_id, "index" => index, "type" => "delete", "version" => _vc},
+         state
+       ) do
+    if index != "marker" do
+      Manager.local_delete(index)
+    end
+
+    {:reply, {:text, "{\"type\":\"ok\"}"}, state}
+  end
+
+  defp handle_message(
+         %{"type" => "disconnect", "peer_id" => _peer_id},
+         state
+       ) do
+    # remove neighbor but for now just leave all neighbors
+    # P2PDocs.Network.NeighborHandler.remove_neighbor(peer_id)
+    P2PDocs.Network.NeighborHandler.leave()
+
+    {:reply, {:text, "{\"type\":\"ok\"}"}, state}
+  end
+
+  defp handle_message(
+         %{"type" => "disconnect"},
+         state
+       ) do
+    # leave all neighbors
+    P2PDocs.Network.NeighborHandler.leave()
+
+    {:reply, {:text, "{\"type\":\"ok\"}"}, state}
+  end
+
+  defp handle_message(
+         %{"client_id" => _client_id, "index" => index, "type" => "delete", "version" => _vc},
          state
        ) do
     if index != "marker" do
