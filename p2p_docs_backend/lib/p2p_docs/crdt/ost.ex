@@ -78,6 +78,9 @@ defmodule P2PDocs.CRDT.OSTree do
     nil
   end
 
+  @doc """
+  Return the position of an element (1-based). Returns 'nil' if not found.
+  """
   @spec index_by_element(%OSTree{}, any()) :: integer() | nil
   def index_by_element(%OSTree{root: root, comparator: comp}, element) do
     find_by_element(comp, root, element)
