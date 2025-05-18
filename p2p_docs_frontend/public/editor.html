@@ -15,6 +15,16 @@
             class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">New File</button>
   </div>
 
+  <div id="loading-screen" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50 hidden">
+    <div class="flex flex-col items-center">
+      <svg class="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+      <span class="text-lg font-medium text-blue-700">Loading...</span>
+    </div>
+  </div>
+
   <div id="disconnect-form" class="mb-6 p-4 bg-gray-100 rounded-md shadow hidden">
     <h1 class="text-xl font-semibold mb-4">Disconnect from P2P Network</h1>
     <button id="disconnect-btn"
@@ -33,7 +43,6 @@
   <div id="editor" contenteditable="true"
        class="border border-gray-300 p-4 min-h-[500px] rounded-md shadow focus:outline-none hidden"></div>
 
-  <script src="/env.js"></script>
   <script src="editor.js"></script>
 </body>
 </html>

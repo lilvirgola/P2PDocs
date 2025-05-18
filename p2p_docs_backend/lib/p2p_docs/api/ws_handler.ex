@@ -1,9 +1,29 @@
 defmodule P2PDocs.API.WebSocket.Handler do
   require Logger
+  alias P2PDocs.CRDT.Manager
   @behaviour :cowboy_websocket_handler
 
   def init(req, state) do
     {:cowboy_websocket, req, state}
+  end
+
+  def remote_insert(index, value) do
+    # Send a message to the client
+    msg = %{
+      type: "insert",
+      index: index,
+      value: value
+    }
+    {:send, {:remote_insert, Jason.encode!(msg)}}
+  end
+
+  def remote_delete(index) do
+    # Send a message to the client
+    msg = %{
+      type: "delete",
+      index: index
+    }
+    {:send, {:remote_insert, Jason.encode!(msg)}}
   end
 
   def websocket_init(state) do
@@ -36,6 +56,14 @@ defmodule P2PDocs.API.WebSocket.Handler do
     {:reply, {:text, "{\"type\":\"ping\"}"}, state}
   end
 
+  def websocket_info({:send, {:remote_insert, msg}}, state) do
+    {:reply, {:text, msg}, state}
+  end
+
+  def websocket_info({:send, {:remote_insert, msg}}, state) do
+    {:reply, {:text, msg}, state}
+  end
+
   def websocket_info({:send, msg}, state) do
     {:reply, {:text, msg}, state}
   end
@@ -63,13 +91,13 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp handle_message(%{"char" => char, "client_id" => client_id, "index" => index, "type" => "insert", "version" => vc}, state) do
-    GenServer.cast(P2PDocs.CRDT.Manager, {:local_insert, index, char})
+    Manager.local_insert(index, char)
     {:reply, {:text, "{\"type\":\"ok\"}"}, state}
   end
 
   defp handle_message(%{"client_id" => client_id, "index" => index, "type" => "delete", "version" => vc}, state) do
     if index != "marker" do
-    GenServer.cast(P2PDocs.CRDT.Manager, {:local_delete, index})
+    Manager.local_delete(index)
     end
     {:reply, {:text, "{\"type\":\"ok\"}"}, state}
   end

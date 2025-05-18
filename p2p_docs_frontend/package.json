@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.5",
     "ws": "^8.18.2"
   },
   "devDependencies": {

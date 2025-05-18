@@ -92,15 +92,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const tokenInput = document.getElementById('token-input');
   const disconnectBtn = document.getElementById('disconnect-btn');
   const peerAddressInput = document.getElementById('peer-address');
-
-  let myEnvEndpoint = window.env.MY_ENV_ENDPOINT || 'localhost:4000';
   let isRemoteUpdate = false;
-  let wsClient = new WebSocketClient(`ws://${myEnvEndpoint}/ws`);;
+  let wsClient = new WebSocketClient(`http://${window.location.host}/ws`);;
   let clientId = null;
   let pendingOperations = [];
   let lastKnownVersion = 0;
     wsClient.onMessage(handleServerMessage);
     wsClient.connect();
+  // Show loading screen until WebSocket is connected
+  const loadingScreen = document.getElementById('loading-screen');
+  loadingScreen.style.display = 'block';
+  editor.style.display = 'none';
+  document.getElementById('connect-form').style.display = 'none';
+  document.getElementById('disconnect-form').style.display = 'none';
+
+  wsClient.onMessage(() => {
+    if (loadingScreen.style.display !== 'none') {
+      loadingScreen.style.display = 'none';
+      document.getElementById('connect-form').style.display = 'block';
+    }
+  });
+
+  wsClient.socket && wsClient.socket.addEventListener('open', () => {
+    loadingScreen.style.display = 'none';
+    document.getElementById('connect-form').style.display = 'block';
+  });
 
   // Connect button handler
   connectBtn.addEventListener('click', () => {

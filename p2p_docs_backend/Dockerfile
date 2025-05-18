@@ -14,7 +14,8 @@ RUN mix do compile
 RUN chmod +x ./start.sh
 #expose the EPMD port
 EXPOSE 4369 9000-9100
-#set node name
-ENV ERL_NODE_NAME=node@127.0.0.1
+
+EXPOSE 4000
+
 # on startup, run the script
 CMD ["./start.sh"]
