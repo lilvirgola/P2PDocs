@@ -1,6 +1,7 @@
 defmodule P2PDocs.API.WebSocket.Handler do
   require Logger
   alias P2PDocs.CRDT.Manager
+  alias P2PDocs.PubSub
   @behaviour :cowboy_websocket_handler
 
   def init(req, state) do
@@ -12,10 +13,9 @@ defmodule P2PDocs.API.WebSocket.Handler do
     msg = %{
       type: "insert",
       index: index,
-      value: value
+      char: value
     }
-
-    {:send, {:remote_insert, Jason.encode!(msg)}}
+    PubSub.broadcast(msg)
   end
 
   def remote_delete(index) do
@@ -24,13 +24,13 @@ defmodule P2PDocs.API.WebSocket.Handler do
       type: "delete",
       index: index
     }
-
-    {:send, {:remote_insert, Jason.encode!(msg)}}
+    PubSub.broadcast(msg)
   end
 
   def websocket_init(state) do
     # Initialize state with empty map if not provided
     Process.send_after(self(), :send_ping, 30_000)
+    PubSub.subscribe(self())
     send_initial_message(state)
     {:ok, Map.new(state || %{})}
   end
@@ -58,16 +58,14 @@ defmodule P2PDocs.API.WebSocket.Handler do
     {:reply, {:text, "{\"type\":\"ping\"}"}, state}
   end
 
-  def websocket_info({:send, {:remote_insert, msg}}, state) do
-    {:reply, {:text, msg}, state}
-  end
-
-  def websocket_info({:send, {:remote_insert, msg}}, state) do
-    {:reply, {:text, msg}, state}
-  end
-
   def websocket_info({:send, msg}, state) do
-    {:reply, {:text, msg}, state}
+    {vc, _d} = P2PDocs.Network.CausalBroadcast.get_vc_and_d_state()
+    operation= %{
+      type: "operations",
+      operations: msg,
+      version: Jason.encode!(vc)
+    }
+    {:reply, {:text, Jason.encode!(operation)}, state}
   end
 
   def websocket_info(_info, state) do
@@ -75,6 +73,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   def terminate(_reason, _req, _state) do
+    PubSub.unsubscribe(self())
     :ok
   end
 

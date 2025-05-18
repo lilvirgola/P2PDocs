@@ -69,7 +69,7 @@ defmodule P2PDocs.Network.NeighborHandler do
         else
           Logger.debug("Node #{inspect(peer_id)} is already a neighbor, but asked to update.")
 
-          Logger.ReliableTransport.send(
+          ReliableTransport.send(
             state.peer_id,
             peer_id,
             Manager,
@@ -83,6 +83,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
+        # If the node is already a neighbor, just return the state
+        {:noreply, state}
       else
         new_neighbors = [peer_id | state.neighbors]
         EchoWave.update_neighbors(new_neighbors)
@@ -165,8 +167,6 @@ defmodule P2PDocs.Network.NeighborHandler do
           {:join, node(), :no_ask}
         )
 
-        :ok
-
       false ->
         Logger.debug("Failed to connect to peer #{inspect(peer_id)}")
         {:error, "Failed to connect to peer"}
@@ -202,7 +202,7 @@ defmodule P2PDocs.Network.NeighborHandler do
   end
 
   def leave() do
-    :init.stop()
+    :init.restart()
   end
 
   @impl true

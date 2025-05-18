@@ -180,8 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (data.type === 'operations') {
       // Handle CRDT operations from server
       isRemoteUpdate = true;
-      applyOperations(data.operations);
-      
+      console.log('[Editor] Received operations:', data.operations);
+      if (data.version!== lastKnownVersion) {
+        applyOperations(data.operations);
+      }
       // Update last known version
       if (data.version) {
         lastKnownVersion = data.version;
@@ -208,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const range = selection.getRangeAt(0);
 
   if (e.inputType === 'insertText') {
-    const index = getCursorIndex(editor, range.startContainer, range.startOffset);
+    const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1; // 1-based
     const operation = {
       type: 'insert',
       index: index,
@@ -217,26 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
       version: lastKnownVersion
     };
 
-    console.log('[Editor] Trying to send insert op:', operation);
-
     if (wsClient.send(operation)) {
       pendingOperations.push(operation);
-      // Do not insert locally — wait for the echoed op
     }
   } else if (e.inputType === 'deleteContentBackward') {
-    const index = getCursorIndex(editor, range.startContainer, range.startOffset)+1;
-    if (index >= 0) {
+    const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1; // 1-based
+    if (index >= 1) {  // Minimum index is 1
       const operation = {
         type: 'delete',
         index: index,
         client_id: clientId,
         version: lastKnownVersion
       };
-      console.log('[Editor] Trying to send delete op:', operation);
 
       if (wsClient.send(operation)) {
         pendingOperations.push(operation);
-        // Do not delete locally — wait for the echoed op
       }
     }
   }
@@ -275,23 +272,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return text.length;
   }
   
-function applyOperations(operations) {
+function applyOperations(op) {
   isRemoteUpdate = true;
+  console.log('[Editor] Applying operation:', op);
+  op = JSON.parse(op)
   
-  operations.forEach(op => {
-    // Skip operations that originated from this client
-    if (op.client_id === clientId) return;
     
-    if (op.type === 'insert') {
-      insertAt(op.index, op.char);
-    } else if (op.type === 'delete') {
-      deleteAt(op.index);
-    }
-  });
-  
-  // Update last known version from the most recent operation
-  if (operations.length > 0) {
-    lastKnownVersion = operations[operations.length - 1].version;
+  if (op["type"]=== 'insert') {
+    console.log('[Editor] Applying insert op:', op);
+    insertAt(op["index"], op["char"]);
+  } else if (op["type"] === 'delete') {
+    console.log('[Editor] Applying delete op:', op);
+    deleteAt(op["index"]);
   }
   
   isRemoteUpdate = false;
@@ -341,29 +333,29 @@ function applyOperations(operations) {
   }
 
   function deleteAt(index) {
-    let pos = 0;
-    
-    for (let i = 0; i < editor.childNodes.length; i++) {
-      const node = editor.childNodes[i];
+      // No need to convert to 0-based since we're using 1-based consistently
+      let pos = 0;
       
-      if (node.nodeType !== Node.TEXT_NODE) {
-        continue;
+      for (let i = 0; i < editor.childNodes.length; i++) {
+        const node = editor.childNodes[i];
+        
+        if (node.nodeType !== Node.TEXT_NODE) {
+          continue;
+        }
+        
+        const nodeLength = node.length || 0;
+        
+        if (pos + nodeLength >= index) {
+          const nodeOffset = index - pos - 1;  // Convert to 0-based for DOM manipulation
+          node.deleteData(nodeOffset, 1);
+          break;
+        }
+        pos += nodeLength;
       }
       
-      const nodeLength = node.length || 0;
-      
-      if (pos + nodeLength > index) {
-        const nodeOffset = index - pos;
-        node.deleteData(nodeOffset, 1);
-        break;
+      if (isRemoteUpdate) {
+        restoreCursorPosition();
       }
-      pos += nodeLength;
-    }
-    
-    // Restore cursor position after remote updates
-    if (isRemoteUpdate) {
-      restoreCursorPosition();
-    }
   }
   
   function restoreCursorPosition() {
