@@ -60,7 +60,9 @@ defmodule P2PDocs.Application do
     node_id = if Mix.env() == :test, do: :test_node, else: node()
 
     [
-      {@api_server, []},
+      # Registry per websocket
+      P2PDocs.PubSub,
+      {@api_server, %{}},
       {P2PDocs.Network.NeighborHandler, node_id},
       {@crdt_manager, [peer_id: node_id]},
       {@causal_broadcast, [my_id: node_id]},
