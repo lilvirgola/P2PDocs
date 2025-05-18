@@ -1,3 +1,4 @@
+// Class defining the WebSocket client for handling connections and messages
 class WebSocketClient {
   constructor(url) {
     this.url = url;
@@ -19,11 +20,11 @@ class WebSocketClient {
       this.reconnectAttempts = 0;
       
       // Send queued messages
-      while (this.messageQueue.length > 0) {
-        this.send(this.messageQueue.shift());
-      }
+      const pendingMessages = [...this.messageQueue];
+      this.messageQueue = [];
+      pendingMessages.forEach(msg => this.send(msg));
       
-      // Start keepalive
+      // Start keepalive to prevent disconnection of the socket on idle
       this.keepaliveInterval = setInterval(() => {
         this.send({ type: 'ping' });
       }, 25000);
@@ -32,7 +33,6 @@ class WebSocketClient {
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // Call all registered message handlers
         this.messageHandlers.forEach(handler => handler(data));
         
         if (data.type === 'ping') {
@@ -66,11 +66,16 @@ class WebSocketClient {
   }
 
   send(message) {
-    // Only send if we have a valid connection
+    const msg = typeof message === 'string' ? message : JSON.stringify(message);
+    
     if (this.socket?.readyState === WebSocket.OPEN) {
-      const msg = typeof message === 'string' ? message : JSON.stringify(message);
       this.socket.send(msg);
       return true;
+    }
+    
+    // Queue message if not connected
+    if (!this.messageQueue.some(m => m === msg)) {
+      this.messageQueue.push(msg);
     }
     return false;
   }
@@ -79,9 +84,11 @@ class WebSocketClient {
     if (this.socket) {
       clearInterval(this.keepaliveInterval);
       this.socket.close(1000, 'Normal closure');
+      this.messageQueue = [];
     }
   }
 }
+
 
 document.addEventListener('DOMContentLoaded', () => {
   const editor = document.getElementById('editor');
@@ -92,13 +99,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const tokenInput = document.getElementById('token-input');
   const disconnectBtn = document.getElementById('disconnect-btn');
   const peerAddressInput = document.getElementById('peer-address');
+  // CSS fixes for overflow
+  Object.assign(editor.style, {
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
+    overflow: 'auto'
+  });
   let isRemoteUpdate = false;
   let wsClient = new WebSocketClient(`http://${window.location.host}/ws`);;
   let clientId = null;
   let pendingOperations = [];
+  let localPendingOperations = [];
   let lastKnownVersion = 0;
-    wsClient.onMessage(handleServerMessage);
-    wsClient.connect();
+  // Initialize editor as non-editable
+  editor.contentEditable = false;
+  wsClient.onMessage(handleServerMessage);
+  wsClient.connect();
+
+  const autoConnect = () => {
+    let peerId = getCookie('peer_id');
+    console.log('Peer ID from cookie:', peerId);
+    
+    // Wait for WebSocket to be ready
+    const tryConnect = () => {
+      if (wsClient.socket?.readyState === WebSocket.OPEN) {
+        if (peerId === "local") {
+          newFileBtn.click();
+        } else if (peerId) {
+          peerAddressInput.value = peerId;
+          connectBtn.click();
+        }
+      } else {
+        setTimeout(tryConnect, 50);
+      }
+    };
+    tryConnect();
+  };
   // Show loading screen until WebSocket is connected
   const loadingScreen = document.getElementById('loading-screen');
   loadingScreen.style.display = 'block';
@@ -146,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     clientId = null;
     pendingOperations = [];
+    
     lastKnownVersion = 0;
     editor.innerHTML = '';
     document.getElementById('connect-form').style.display = 'block';
@@ -168,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tokenInput.value = clientId;
     });
         
-
+  // function to connect to the server for a new file or from the state of an other peer
   function connectToServer(peerAddress) {
     // Register message handler
     
@@ -185,10 +223,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleServerMessage(data) {
     if (data.type === 'init') {
-      // Initial document content and client ID
       clientId = data.client_id;
       lastKnownVersion = data.version || 0;
       editor.innerHTML = data.content || '';
+      editor.contentEditable = true; // Enable editing after init
+      editor.normalize(); // Normalize text nodes
+
+      // Process any locally queued operations
+      localPendingOperations.forEach(op => {
+        op.client_id = clientId;
+        wsClient.send(op);
+      });
+      localPendingOperations = [];
     } 
     else if (data.type === 'operations') {
       // Handle CRDT operations from server
@@ -217,7 +263,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Handle local edits
   editor.addEventListener('input', (e) => {
-  if (isRemoteUpdate || !wsClient) return;
+  if (isRemoteUpdate || !clientId) {
+      if (!clientId) {
+        // Store operation locally until we get client ID
+        const operation = createOperationFromEvent(e);
+        if (operation) localPendingOperations.push(operation);
+      }
+      return;
+  }
 
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
@@ -298,7 +351,7 @@ function applyOperations(op) {
     console.log('[Editor] Applying delete op:', op);
     deleteAt(op["index"]);
   }
-  
+  editor.normalize(); // Normalize text nodes
   isRemoteUpdate = false;
 }
   
@@ -371,6 +424,31 @@ function applyOperations(op) {
         restoreCursorPosition();
       }
   }
+
+  function createOperationFromEvent(e) {
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    
+    if (e.inputType === 'insertText') {
+      const index = getCursorIndex(editor, range.startContainer, range.startOffset);
+      return {
+        type: 'insert',
+        index: index,
+        char: e.data,
+        version: lastKnownVersion
+      };
+    } else if (e.inputType === 'deleteContentBackward') {
+      const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1;
+      if (index >= 1) {
+        return {
+          type: 'delete',
+          index: index,
+          version: lastKnownVersion
+        };
+      }
+    }
+    return null;
+  }
   
   function restoreCursorPosition() {
     // This is a simplified version - you might want to implement
@@ -401,4 +479,5 @@ function applyOperations(op) {
   function deleteCookie(name) {
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
   }
+  autoConnect();
 });

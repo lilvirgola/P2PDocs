@@ -3,6 +3,17 @@
 <head>
   <title>CRDT Editor</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #editor {
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      overflow: auto;
+      min-height: 100px;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+  </style>
 </head>
 <body class="font-sans max-w-3xl mx-auto p-5 bg-white text-gray-800">
   <div id="connect-form" class="mb-6 p-4 bg-gray-100 rounded-md shadow">
