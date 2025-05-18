@@ -83,6 +83,7 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
+
         # If the node is already a neighbor, just return the state
         {:noreply, state}
       else
