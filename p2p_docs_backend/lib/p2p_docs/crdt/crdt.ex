@@ -138,7 +138,7 @@ defmodule P2PDocs.CRDT.CrdtText do
            pos_by_id: Map.put(state.pos_by_id, id, pos)
        }}
     else
-      {OSTree.index_by_element(state.chars, char), state}
+      {nil, state}
     end
   end
 
