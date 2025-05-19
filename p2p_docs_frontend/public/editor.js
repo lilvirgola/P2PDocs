@@ -16,38 +16,41 @@ class WebSocketClient {
     this.socket = new WebSocket(this.url);
 
     this.socket.onopen = () => {
-      console.log('WebSocket connected');
+      console.log("WebSocket connected");
       this.reconnectAttempts = 0;
-      
+
       // Send queued messages
       const pendingMessages = [...this.messageQueue];
       this.messageQueue = [];
-      pendingMessages.forEach(msg => this.send(msg));
-      
+      pendingMessages.forEach((msg) => this.send(msg));
+
       // Start keepalive to prevent disconnection of the socket on idle
       this.keepaliveInterval = setInterval(() => {
-        this.send({ type: 'ping' });
+        this.send({ type: "ping" });
       }, 25000);
     };
 
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        this.messageHandlers.forEach(handler => handler(data));
-        
-        if (data.type === 'ping') {
-          this.send({ type: 'pong' });
+        this.messageHandlers.forEach((handler) => handler(data));
+
+        if (data.type === "ping") {
+          this.send({ type: "pong" });
         }
       } catch (e) {
-        console.error('Error parsing message:', e);
+        console.error("Error parsing message:", e);
       }
     };
 
     this.socket.onclose = (event) => {
       console.log(`WebSocket closed: ${event.code}`);
       clearInterval(this.keepaliveInterval);
-      
-      if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+
+      if (
+        event.code !== 1000 &&
+        this.reconnectAttempts < this.maxReconnectAttempts
+      ) {
         setTimeout(() => {
           this.reconnectAttempts++;
           console.log(`Reconnecting attempt ${this.reconnectAttempts}...`);
@@ -57,7 +60,7 @@ class WebSocketClient {
     };
 
     this.socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
     };
   }
 
@@ -66,15 +69,15 @@ class WebSocketClient {
   }
 
   send(message) {
-    const msg = typeof message === 'string' ? message : JSON.stringify(message);
-    
+    const msg = typeof message === "string" ? message : JSON.stringify(message);
+
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(msg);
       return true;
     }
-    
+
     // Queue message if not connected
-    if (!this.messageQueue.some(m => m === msg)) {
+    if (!this.messageQueue.some((m) => m === msg)) {
       this.messageQueue.push(msg);
     }
     return false;
@@ -83,31 +86,30 @@ class WebSocketClient {
   disconnect() {
     if (this.socket) {
       clearInterval(this.keepaliveInterval);
-      this.socket.close(1000, 'Normal closure');
+      this.socket.close(1000, "Normal closure");
       this.messageQueue = [];
     }
   }
 }
 
-
-document.addEventListener('DOMContentLoaded', () => {
-  const editor = document.getElementById('editor');
-  const connectBtn = document.getElementById('connect-btn');
-  const newFileBtn = document.getElementById('new-file-btn');
-  const shareBtn = document.getElementById('share-btn');
-  const tokenDiv = document.getElementById('token');
-  const tokenInput = document.getElementById('token-input');
-  const disconnectBtn = document.getElementById('disconnect-btn');
-  const peerAddressInput = document.getElementById('peer-address');
+document.addEventListener("DOMContentLoaded", () => {
+  const editor = document.getElementById("editor");
+  const connectBtn = document.getElementById("connect-btn");
+  const newFileBtn = document.getElementById("new-file-btn");
+  const shareBtn = document.getElementById("share-btn");
+  const tokenDiv = document.getElementById("token");
+  const tokenInput = document.getElementById("token-input");
+  const disconnectBtn = document.getElementById("disconnect-btn");
+  const peerAddressInput = document.getElementById("peer-address");
   // CSS fixes for overflow
   Object.assign(editor.style, {
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'break-word',
-    wordBreak: 'break-word',
-    overflow: 'auto'
+    whiteSpace: "pre-wrap",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    overflow: "auto",
   });
   let isRemoteUpdate = false;
-  let wsClient = new WebSocketClient(`http://${window.location.host}/ws`);;
+  let wsClient = new WebSocketClient(`http://${window.location.host}/ws`);
   let clientId = null;
   let pendingOperations = [];
   let localPendingOperations = [];
@@ -117,9 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
   wsClient.connect();
 
   const autoConnect = () => {
-    let peerId = getCookie('peer_id');
-    console.log('Peer ID from cookie:', peerId);
-    
+    let peerId = getCookie("peer_id");
+    console.log("Peer ID from cookie:", peerId);
+
     // Wait for WebSocket to be ready
     const tryConnect = () => {
       if (wsClient.socket?.readyState === WebSocket.OPEN) {
@@ -136,183 +138,203 @@ document.addEventListener('DOMContentLoaded', () => {
     tryConnect();
   };
   // Show loading screen until WebSocket is connected
-  const loadingScreen = document.getElementById('loading-screen');
-  loadingScreen.style.display = 'block';
-  editor.style.display = 'none';
-  document.getElementById('connect-form').style.display = 'none';
-  document.getElementById('disconnect-form').style.display = 'none';
+  const loadingScreen = document.getElementById("loading-screen");
+  loadingScreen.style.display = "block";
+  editor.style.display = "none";
+  document.getElementById("connect-form").style.display = "none";
+  document.getElementById("disconnect-form").style.display = "none";
 
   wsClient.onMessage(() => {
-    if (loadingScreen.style.display !== 'none') {
-      loadingScreen.style.display = 'none';
-      document.getElementById('connect-form').style.display = 'block';
+    if (loadingScreen.style.display !== "none") {
+      loadingScreen.style.display = "none";
+      document.getElementById("connect-form").style.display = "block";
     }
   });
 
-  wsClient.socket && wsClient.socket.addEventListener('open', () => {
-    loadingScreen.style.display = 'none';
-    document.getElementById('connect-form').style.display = 'block';
-  });
+  wsClient.socket &&
+    wsClient.socket.addEventListener("open", () => {
+      loadingScreen.style.display = "none";
+      document.getElementById("connect-form").style.display = "block";
+    });
 
   // Connect button handler
-  connectBtn.addEventListener('click', () => {
+  connectBtn.addEventListener("click", () => {
     const peerAddress = peerAddressInput.value.trim();
-    console.log('Connecting to peer:', peerAddress);
+    console.log("Connecting to peer:", peerAddress);
     connectToServer(peerAddress);
-    document.getElementById('connect-form').style.display = 'none';
-    document.getElementById('disconnect-form').style.display = 'block';
-    editor.style.display = 'block';
+    document.getElementById("connect-form").style.display = "none";
+    document.getElementById("disconnect-form").style.display = "block";
+    editor.style.display = "block";
   });
 
   // New file button handler
-  newFileBtn.addEventListener('click', () => {
+  newFileBtn.addEventListener("click", () => {
     connectToServer();
-    document.getElementById('connect-form').style.display = 'none';
-    document.getElementById('disconnect-form').style.display = 'block';
-    editor.style.display = 'block';
+    document.getElementById("connect-form").style.display = "none";
+    document.getElementById("disconnect-form").style.display = "block";
+    editor.style.display = "block";
   });
 
   // Disconnect button handler
-  disconnectBtn.addEventListener('click', () => {
-    const peerId = getCookie('peer_id');
+  disconnectBtn.addEventListener("click", () => {
+    const peerId = getCookie("peer_id");
     if (peerId && peerId !== clientId) {
-      wsClient.send({ type: 'disconnect', peer_id: peerId });
+      wsClient.send({ type: "disconnect", peer_id: peerId });
     } else {
-      wsClient.send({ type: 'disconnect' });
+      wsClient.send({ type: "disconnect" });
     }
     clientId = null;
     pendingOperations = [];
-    
-    editor.innerHTML = '';
-    document.getElementById('connect-form').style.display = 'block';
-    document.getElementById('disconnect-form').style.display = 'none';
-    tokenDiv.style.display = 'none';
-    editor.style.display = 'none';
+
+    editor.innerHTML = "";
+    document.getElementById("connect-form").style.display = "block";
+    document.getElementById("disconnect-form").style.display = "none";
+    tokenDiv.style.display = "none";
+    editor.style.display = "none";
 
     // Clear the cookie
-    deleteCookie('peer_id');
+    deleteCookie("peer_id");
   });
 
-    // Share button handler
-    shareBtn.addEventListener('click', () => {
-        if (tokenDiv.style.display === 'block'){
-            tokenDiv.style.display = 'none';
-        }
-        else{
-            tokenDiv.style.display = 'block';
-        }
-        tokenInput.value = clientId;
-    });
-        
+  // Share button handler
+  shareBtn.addEventListener("click", () => {
+    if (tokenDiv.style.display === "block") {
+      tokenDiv.style.display = "none";
+    } else {
+      tokenDiv.style.display = "block";
+    }
+    tokenInput.value = clientId;
+  });
+
   // function to connect to the server for a new file or from the state of an other peer
   function connectToServer(peerAddress) {
     // Register message handler
-    
+
     if (peerAddress) {
-      wsClient.send({ type: 'connect', peer_address: peerAddress });
-      setCookie('peer_id', peerAddress, 7);
-    }
-    else {
-      setCookie('peer_id', "local", 7);
+      wsClient.send({ type: "connect", peer_address: peerAddress });
+      setCookie("peer_id", peerAddress, 7);
+    } else {
+      setCookie("peer_id", "local", 7);
     }
     // get client ID
-    wsClient.send({ type: 'get_client_id' });
+    wsClient.send({ type: "get_client_id" });
   }
 
   function handleServerMessage(data) {
-    if (data.type === 'init') {
+    if (data.type === "init") {
       clientId = data.client_id;
-      editor.innerHTML = data.content || '';
+      editor.innerHTML = data.content || "";
       editor.contentEditable = true; // Enable editing after init
       editor.normalize(); // Normalize text nodes
 
       // Process any locally queued operations
-      localPendingOperations.forEach(op => {
+      localPendingOperations.forEach((op) => {
         op.client_id = clientId;
         wsClient.send(op);
       });
       localPendingOperations = [];
-    } 
-    else if (data.type === 'operations') {
+    } else if (data.type === "operations") {
       // Handle CRDT operations from server
       isRemoteUpdate = true;
-      console.log('[Editor] Received operations:', data.operations);
+      console.log("[Editor] Received operations:", data.operations);
       applyOperations(data.operations);
-      
+
       isRemoteUpdate = false;
-    }
-    else if (data.type === 'error') {
-      if (data.message==="invalid_peer_address") {
+    } else if (data.type === "error") {
+      if (data.message === "invalid_peer_address") {
         disconnectBtn.click();
         alert("Invalid peer address. Please try again.");
-      }
-      else{
-        console.error('Unknown error from server', data);
+      } else {
+        console.error("Unknown error from server", data);
       }
     }
   }
 
   // Handle local edits
-  editor.addEventListener('input', (e) => {
-  if (isRemoteUpdate || !clientId) {
+  editor.addEventListener("input", (e) => {
+    if (isRemoteUpdate || !clientId) {
       if (!clientId) {
         // Store operation locally until we get client ID
         const operation = createOperationFromEvent(e);
         if (operation) localPendingOperations.push(operation);
       }
       return;
-  }
-
-  const selection = window.getSelection();
-  const range = selection.getRangeAt(0);
-
-  if (e.inputType === 'insertText') {
-    const index = getCursorIndex(editor, range.startContainer, range.startOffset); // 1-based
-    const operation = {
-      type: 'insert',
-      index: index,
-      char: e.data,
-      client_id: clientId
-    };
-
-    if (wsClient.send(operation)) {
-      pendingOperations.push(operation);
     }
-  } else if (e.inputType === 'deleteContentBackward') {
-    const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1; // 1-based
-    if (index >= 1) {  // Minimum index is 1
+
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+
+    if (e.inputType === "insertText") {
+      const index = getCursorIndex(
+        editor,
+        range.startContainer,
+        range.startOffset
+      ); // 1-based
       const operation = {
-        type: 'delete',
+        type: "insert",
         index: index,
-        client_id: clientId
+        char: e.data,
+        client_id: clientId,
       };
 
       if (wsClient.send(operation)) {
         pendingOperations.push(operation);
       }
+    } else if (
+      e.inputType === "insertLineBreak" ||
+      e.inputType === "insertParagraph"
+    ) {
+      const index = getCursorIndex(
+        editor,
+        range.startContainer,
+        range.startOffset
+      ) + 1;
+      const operation = {
+        type: "insert",
+        index: index,
+        char: "\n",
+        client_id: clientId,
+      };
+      if (wsClient.send(operation)) {
+        pendingOperations.push(operation);
+      }
+    } else if (e.inputType === "deleteContentBackward") {
+      const index =
+        getCursorIndex(editor, range.startContainer, range.startOffset) + 1; // 1-based
+      if (index >= 1) {
+        // Minimum index is 1
+        const operation = {
+          type: "delete",
+          index: index,
+          client_id: clientId,
+        };
+
+        if (wsClient.send(operation)) {
+          pendingOperations.push(operation);
+        }
+      }
     }
-  }
-});
-  
+  });
+
   // More accurate cursor position handling
   function getCursorIndex(editor, node, offset) {
     const range = document.createRange();
     range.setStart(editor, 0);
     range.setEnd(node, offset);
-    
+
     // Handle cases where the editor might contain other elements
-    let text = '';
+    let text = "";
     const treeWalker = document.createTreeWalker(
       range.commonAncestorContainer,
       NodeFilter.SHOW_TEXT,
       {
-        acceptNode: function(node) {
+        acceptNode: function (node) {
           return NodeFilter.FILTER_ACCEPT;
-        }
+        },
       },
       false
     );
-    
+
     let currentNode = treeWalker.nextNode();
     while (currentNode) {
       if (currentNode === range.endContainer) {
@@ -323,127 +345,163 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       currentNode = treeWalker.nextNode();
     }
-    
+
     return text.length;
   }
-  
-function applyOperations(op) {
-  isRemoteUpdate = true;
-  console.log('[Editor] Applying operation:', op);
-  op = JSON.parse(op)
-  
-    
-  if (op["type"]=== 'insert') {
-    console.log('[Editor] Applying insert op:', op);
-    insertAt(op["index"], op["char"]);
-  } else if (op["type"] === 'delete') {
-    console.log('[Editor] Applying delete op:', op);
-    deleteAt(op["index"]);
-  }
-  editor.normalize(); // Normalize text nodes
-  isRemoteUpdate = false;
-}
-  
-  function insertAt(index, char) {
-    index = index - 1; // Convert to 0-based index
-    const textNode = document.createTextNode(char);
-    const range = document.createRange();
-    
-    if (editor.childNodes.length === 0) {
-      editor.appendChild(document.createTextNode(''));
+
+  function applyOperations(op) {
+    isRemoteUpdate = true;
+    console.log("[Editor] Applying operation:", op);
+    op = JSON.parse(op);
+
+    if (op["type"] === "insert") {
+      console.log("[Editor] Applying insert op:", op);
+      insertAt(op["index"], op["char"]);
+    } else if (op["type"] === "delete") {
+      console.log("[Editor] Applying delete op:", op);
+      deleteAt(op["index"]);
     }
-    
+    editor.normalize(); // Normalize text nodes
+    isRemoteUpdate = false;
+  }
+
+  function insertAt(index, char) {
+    index = index - 1; // zero-based
+    const range = document.createRange();
+
+    if (char === "\n") {
+      // Create a <br> for newline
+      const br = document.createElement("br");
+      let pos = 0;
+      let inserted = false;
+
+      for (let node of editor.childNodes) {
+        if (node.nodeType !== Node.TEXT_NODE && node.nodeName !== "BR") {
+          continue;
+        }
+        const length = node.nodeType === Node.TEXT_NODE ? node.length : 1;
+        if (pos + length >= index) {
+          // split before this node
+          if (node.nodeType === Node.TEXT_NODE) {
+            const offset = index - pos;
+            range.setStart(node, offset);
+            range.setEnd(node, offset);
+          } else {
+            // at a <br>, insert right before it
+            range.setStartBefore(node);
+            range.setEndBefore(node);
+          }
+          range.insertNode(br);
+          inserted = true;
+          break;
+        }
+        pos += length;
+      }
+      if (!inserted) {
+        editor.appendChild(br);
+      }
+    } else {
+      // existing text-node insertion
+      const textNode = document.createTextNode(char);
+      let pos = 0;
+      let inserted = false;
+
+      for (let node of editor.childNodes) {
+        if (node.nodeType !== Node.TEXT_NODE) continue;
+        const length = node.length;
+        if (pos + length >= index) {
+          const offset = index - pos;
+          range.setStart(node, offset);
+          range.setEnd(node, offset);
+          range.insertNode(textNode);
+          inserted = true;
+          break;
+        }
+        pos += length;
+      }
+      if (!inserted) {
+        editor.appendChild(textNode);
+      }
+    }
+
+    if (isRemoteUpdate) restoreCursorPosition();
+  }
+
+  function deleteAt(index) {
+    // No need to convert to 0-based since we're using 1-based consistently
     let pos = 0;
-    let found = false;
-    
-    // Walk through child nodes to find the correct position
+
     for (let i = 0; i < editor.childNodes.length; i++) {
       const node = editor.childNodes[i];
-      
-      // Skip non-text nodes
-      if (node.nodeType !== Node.TEXT_NODE) {
+
+      if (node.nodeType !== Node.TEXT_NODE && node.nodeName !== "BR") {
         continue;
       }
-      
-      const nodeLength = node.length || 0;
-      
-      if (pos + nodeLength >= index) {
-        const nodeOffset = index - pos;
-        range.setStart(node, nodeOffset);
-        range.setEnd(node, nodeOffset);
-        range.insertNode(textNode);
-        found = true;
+
+      const length = node.nodeType === Node.TEXT_NODE ? node.length : 1;
+      if (pos + length >= index) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const offset = index - pos - 1;
+          node.deleteData(offset, 1);
+        } else {
+          // remove the <br>
+          node.parentNode.removeChild(node);
+        }
         break;
       }
       pos += nodeLength;
     }
-    
-    if (!found && index >= pos) {
-      editor.appendChild(textNode);
-    }
-    
-    // Restore cursor position after remote updates
+
     if (isRemoteUpdate) {
       restoreCursorPosition();
     }
   }
 
-  function deleteAt(index) {
-      // No need to convert to 0-based since we're using 1-based consistently
-      let pos = 0;
-      
-      for (let i = 0; i < editor.childNodes.length; i++) {
-        const node = editor.childNodes[i];
-        
-        if (node.nodeType !== Node.TEXT_NODE) {
-          continue;
-        }
-        
-        const nodeLength = node.length || 0;
-        
-        if (pos + nodeLength >= index) {
-          const nodeOffset = index - pos - 1;  // Convert to 0-based for DOM manipulation
-          node.deleteData(nodeOffset, 1);
-          break;
-        }
-        pos += nodeLength;
-      }
-      
-      if (isRemoteUpdate) {
-        restoreCursorPosition();
-      }
-  }
-
   function createOperationFromEvent(e) {
     const selection = window.getSelection();
     const range = selection.getRangeAt(0);
-    
-    if (e.inputType === 'insertText') {
-      const index = getCursorIndex(editor, range.startContainer, range.startOffset);
+
+    if (e.inputType === "insertText") {
+      const index = getCursorIndex(
+        editor,
+        range.startContainer,
+        range.startOffset
+      );
       return {
-        type: 'insert',
+        type: "insert",
         index: index,
-        char: e.data
+        char: e.data,
       };
-    } else if (e.inputType === 'deleteContentBackward') {
-      const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1;
+    } else if (
+      e.inputType === "insertLineBreak" ||
+      e.inputType === "insertParagraph"
+    ) {
+      const index = getCursorIndex(
+        editor,
+        range.startContainer,
+        range.startOffset
+      );
+      return { type: "insert", index: index, char: "\n" };
+    } else if (e.inputType === "deleteContentBackward") {
+      const index =
+        getCursorIndex(editor, range.startContainer, range.startOffset) + 1;
       if (index >= 1) {
         return {
-          type: 'delete',
-          index: index
+          type: "delete",
+          index: index,
         };
       }
     }
     return null;
   }
-  
+
   function restoreCursorPosition() {
     // This is a simplified version - you might want to implement
     // a more sophisticated cursor position tracking system
     const range = document.createRange();
     range.selectNodeContents(editor);
     range.collapse(false); // Move to end
-    
+
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -453,12 +511,12 @@ function applyOperations(op) {
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
+    if (parts.length === 2) return parts.pop().split(";").shift();
   }
 
   function setCookie(name, value, days) {
     const date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
     const expires = `expires=${date.toUTCString()}`;
     document.cookie = `${name}=${value}; ${expires}; path=/`;
   }
