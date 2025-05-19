@@ -43,7 +43,7 @@ defmodule P2PDocs.Network.ReliableTransport do
   def handle_cast({:send, from, to, module, payload}, state) do
     # generate a unique message id
     msg_id = {state.node_id, :erlang.unique_integer([:monotonic, :positive])}
-    Logger.debug("Sending msg_id=#{msg_id} to #{inspect(to)}: #{inspect({module, payload})}")
+    Logger.debug("Sending msg_id=#{inspect(msg_id)} to #{inspect(to)}: #{inspect({module, payload})}")
 
     # actually send it
     GenServer.cast({__MODULE__, to}, {:deliver, from, module, payload, msg_id})
@@ -68,7 +68,7 @@ defmodule P2PDocs.Network.ReliableTransport do
   def handle_cast({:deliver, from, module, payload, msg_id}, state) do
     unless MapSet.member?(state.past_msg, msg_id) do
       Logger.debug(
-        "Received msg_id=#{msg_id} from #{inspect(from)}: #{inspect({module, payload})}"
+        "Received msg_id=#{inspect(msg_id)} from #{inspect(from)}: #{inspect({module, payload})}"
       )
 
       # forward to the actual handler
@@ -91,7 +91,7 @@ defmodule P2PDocs.Network.ReliableTransport do
         {:noreply, state}
 
       {%{timer_ref: timer_ref} = _info, new_pending} ->
-        Logger.debug("ACK received for msg_id=#{msg_id}, cancelling retries")
+        Logger.debug("ACK received for msg_id=#{inspect(msg_id)}, cancelling retries")
         Process.cancel_timer(timer_ref)
         {:noreply, %{state | pending_ack: new_pending}}
     end
@@ -110,7 +110,7 @@ defmodule P2PDocs.Network.ReliableTransport do
         {:noreply, state}
 
       %{from: from, to: to, module: module, payload: payload} = info ->
-        Logger.warning("Retrying msg_id=#{msg_id} to #{inspect(to)}")
+        Logger.warning("Retrying msg_id=#{inspect(msg_id)} to #{inspect(to)}")
 
         # retransmit
         GenServer.cast({__MODULE__, to}, {:deliver, from, module, payload, msg_id})
