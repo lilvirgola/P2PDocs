@@ -16,12 +16,12 @@ defmodule P2PDocs.Network.ReliableTransport do
   Sends `payload` from `from` to `to` under the given module,
   and retries every #{@retry_interval}ms until an ACK is received.
   """
+  @callback send(from :: any, to :: any, module :: any, payload :: any) :: :ok
   def send(from, to, module, payload) do
     GenServer.cast(__MODULE__, {:send, from, to, module, payload})
   end
 
   ## GenServer callbacks
-
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end

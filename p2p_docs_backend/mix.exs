@@ -36,7 +36,9 @@ defmodule P2PDocs.MixProject do
       {:plug_cowboy, "~> 2.6"},
       {:jason, "~> 1.2"},
       # for documentation generation
-      {:ex_doc, "~> 0.30", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.30", only: :dev, runtime: false},
+      # for the dynamic creation of test mocks
+      {:mox, "~> 0.5.2", only: :test}
     ]
   end
 end

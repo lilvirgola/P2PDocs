@@ -106,8 +106,8 @@ defmodule P2PDocs.Network.EchoWave do
   def handle_cast({:del, neighbors}, state),
     do: {:noreply, %{state | neighbors: state.neighbors -- neighbors}}
 
-  def handle_cast({:wave_complete, _, wave_id}, state) do
-    Logger.debug("Echo-Wave #{inspect(wave_id)} ended")
+  def handle_cast({:wave_complete, _from, wave_id, count}, state) do
+    Logger.debug("Echo-Wave #{inspect(wave_id)} ended with #{count} nodes")
     {:noreply, state}
   end
 
@@ -116,22 +116,26 @@ defmodule P2PDocs.Network.EchoWave do
     {:noreply, state}
   end
 
-  def terminate(reason, state) do
-    Logger.debug(
-      "Terminating EchoWave process for node #{inspect(state)} due to #{inspect(reason)}"
-    )
+  # def terminate(reason, state) do
+  #   Logger.debug(
+  #     "Terminating EchoWave process for node #{inspect(state)} due to #{inspect(reason)}"
+  #   )
 
-    # placeholder for any cleanup tasks
-    :ok
-  end
+  #   # placeholder for any cleanup tasks
+  #   :ok
+  # end
 
   defp send_token(state, neighbor, wave_id, msg) do
-    ReliableTransport.send(
+    reliable_transport().send(
       state.id,
       get_peer(neighbor),
       __MODULE__,
       {:token, state.id, wave_id, 0, msg}
     )
+  end
+
+  defp reliable_transport() do
+    Application.get_env(:p2p_docs, :reliable_transport, ReliableTransport)
   end
 
   defp report_back?(state, wave_id) do
@@ -146,12 +150,12 @@ defmodule P2PDocs.Network.EchoWave do
     end
   end
 
-  defp send_back(state, parent, wave_id, _count) when is_pid(parent) do
-    GenServer.cast(parent, {:wave_complete, state.id, wave_id})
+  defp send_back(state, parent, wave_id, count) when is_pid(parent) do
+    send(parent, {:wave_complete, state.id, wave_id, count})
   end
 
   defp send_back(state, parent, wave_id, count) do
-    ReliableTransport.send(
+    reliable_transport().send(
       state.id,
       get_peer(parent),
       __MODULE__,
@@ -164,12 +168,16 @@ defmodule P2PDocs.Network.EchoWave do
       "#{state.id} received #{inspect(wave_id)} token for the first time, from #{inspect(from)}"
     )
 
-    CausalBroadcast.deliver_to_causal(msg)
+    causal_broadcast().deliver_to_causal(causal_broadcast(), msg)
     children = state.neighbors -- [from]
     Enum.each(children, &send_token(state, &1, wave_id, msg))
 
     wave = %Wave{parent: from, remaining: children, count: count + 1}
     %{state | pending_waves: Map.put(pending, wave_id, wave)}
+  end
+
+  defp causal_broadcast() do
+    Application.get_env(:p2p_docs, :causal_broadcast, CausalBroadcast)
   end
 
   defp handle_existing_wave(state, from, wave_id, count, prev, pending) do
