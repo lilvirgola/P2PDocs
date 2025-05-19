@@ -8,7 +8,7 @@ defmodule P2PDocs.Network.ReliableTransport do
   defstruct node_id: nil,
             # %{msg_id => %{from, to, module, payload, timer_ref}}
             pending_ack: %{},
-            crash: false
+            past_msg: MapSet.new()
 
   ## API
 
@@ -42,13 +42,11 @@ defmodule P2PDocs.Network.ReliableTransport do
   @impl true
   def handle_cast({:send, from, to, module, payload}, state) do
     # generate a unique message id
-    msg_id = :erlang.unique_integer([:monotonic, :positive])
+    msg_id = {state.node_id, :erlang.unique_integer([:monotonic, :positive])}
     Logger.debug("Sending msg_id=#{msg_id} to #{inspect(to)}: #{inspect({module, payload})}")
 
     # actually send it
-    unless state.crash do
-      GenServer.cast({__MODULE__, to}, {:deliver, from, module, payload, msg_id})
-    end
+    GenServer.cast({__MODULE__, to}, {:deliver, from, module, payload, msg_id})
 
     # schedule retry
     timer_ref = Process.send_after(self(), {:timeout, msg_id}, @retry_interval)
@@ -68,17 +66,20 @@ defmodule P2PDocs.Network.ReliableTransport do
 
   @impl true
   def handle_cast({:deliver, from, module, payload, msg_id}, state) do
-    Logger.debug("Received msg_id=#{msg_id} from #{inspect(from)}: #{inspect({module, payload})}")
+    unless MapSet.member?(state.past_msg, msg_id) do
+      Logger.debug(
+        "Received msg_id=#{msg_id} from #{inspect(from)}: #{inspect({module, payload})}"
+      )
 
-    unless state.crash do
       # forward to the actual handler
       GenServer.cast({module, state.node_id}, payload)
 
       # send back ACK to origin
       GenServer.cast({__MODULE__, from}, {:ack, msg_id})
+      {:noreply, %__MODULE__{state | past_msg: MapSet.put(state.past_msg, msg_id)}}
+    else
+      {:noreply, state}
     end
-
-    {:noreply, state}
   end
 
   @impl true
@@ -93,16 +94,6 @@ defmodule P2PDocs.Network.ReliableTransport do
         Process.cancel_timer(timer_ref)
         {:noreply, %{state | pending_ack: new_pending}}
     end
-  end
-
-  @impl true
-  def handle_cast(:crash, state) do
-    {:noreply, %__MODULE__{state | crash: true}}
-  end
-
-  @impl true
-  def handle_cast(:restore, state) do
-    {:noreply, %__MODULE__{state | crash: false}}
   end
 
   def handle_cast(_, state) do
@@ -120,10 +111,8 @@ defmodule P2PDocs.Network.ReliableTransport do
       %{from: from, to: to, module: module, payload: payload} = info ->
         Logger.warning("Retrying msg_id=#{msg_id} to #{inspect(to)}")
 
-        unless state.crash do
-          # retransmit
-          GenServer.cast({__MODULE__, to}, {:deliver, from, module, payload, msg_id})
-        end
+        # retransmit
+        GenServer.cast({__MODULE__, to}, {:deliver, from, module, payload, msg_id})
 
         # schedule next retry
         new_timer = Process.send_after(self(), {:timeout, msg_id}, @retry_interval)
@@ -142,21 +131,5 @@ defmodule P2PDocs.Network.ReliableTransport do
 
     # placeholder for any cleanup tasks
     :ok
-  end
-
-  def connection_crash() do
-    if Mix.env() == :manualtest do
-      GenServer.cast(__MODULE__, :crash)
-    else
-      Logger.error("Cannot do crash: not in manual testing!")
-    end
-  end
-
-  def connection_restore() do
-    if Mix.env() == :manualtest do
-      GenServer.cast(__MODULE__, :restore)
-    else
-      Logger.error("Cannot do restore: not in manual testing!")
-    end
   end
 end

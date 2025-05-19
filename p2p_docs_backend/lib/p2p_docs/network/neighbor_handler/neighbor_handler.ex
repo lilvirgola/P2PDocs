@@ -161,7 +161,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     {:noreply, state}
   end
 
-    def handle_cast(_, state) do
+  def handle_cast(_, state) do
     Logger.error("Message not valid!")
     {:noreply, state}
   end

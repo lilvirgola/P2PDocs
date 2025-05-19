@@ -12,8 +12,7 @@ defmodule P2PDocs.Network.EchoWave do
 
   defstruct id: nil,
             neighbors: [],
-            pending_waves: %{},
-            past_waves: %{}
+            pending_waves: %{}
 
   defmodule Wave do
     defstruct parent: nil,
@@ -64,38 +63,28 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   def handle_cast({:token, from, wave_id, count, msg}, state) do
-    unless Map.has_key?(state.past_waves, wave_id) do
-      new_state =
-        case Map.pop(state.pending_waves, wave_id) do
-          {nil, pending} ->
-            handle_new_wave(state, from, wave_id, count, msg, pending)
+    new_state =
+      case Map.pop(state.pending_waves, wave_id) do
+        {nil, pending} ->
+          handle_new_wave(state, from, wave_id, count, msg, pending)
 
-          {prev = %Wave{}, pending} ->
-            handle_existing_wave(state, from, wave_id, count, prev, pending)
-        end
+        {prev = %Wave{}, pending} ->
+          handle_existing_wave(state, from, wave_id, count, prev, pending)
+      end
 
-      new_state =
-        if report_back?(new_state, wave_id) do
-          Logger.debug("#{state.id} removes #{inspect(wave_id)} from its pending waves")
+    new_state =
+      if report_back?(new_state, wave_id) do
+        Logger.debug("#{state.id} removes #{inspect(wave_id)} from its pending waves")
 
-          parent = Map.get(new_state.pending_waves, wave_id).parent
-
-          %__MODULE__{
-            new_state
-            | pending_waves: Map.delete(new_state.pending_waves, wave_id),
-              past_waves: Map.put(new_state.past_waves, wave_id, parent)
-          }
-        else
+        %__MODULE__{
           new_state
-        end
+          | pending_waves: Map.delete(new_state.pending_waves, wave_id)
+        }
+      else
+        new_state
+      end
 
-      {:noreply, new_state}
-    else
-      Logger.debug("#{state.id} has already closed wave #{inspect(wave_id)}")
-
-      send_back(state, state.past_waves[wave_id], wave_id, count)
-      {:noreply, state}
-    end
+    {:noreply, new_state}
   end
 
   def handle_cast({:update, neighbors}, state), do: {:noreply, %{state | neighbors: neighbors}}
