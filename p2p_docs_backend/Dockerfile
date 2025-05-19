@@ -8,6 +8,8 @@ WORKDIR /app
 # Install dependencies
 RUN mix local.hex --force
 
+RUN mix deps.get
+
 # Compile the project.
 RUN mix do compile
 

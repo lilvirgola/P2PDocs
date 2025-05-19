@@ -26,3 +26,5 @@ config :p2p_docs, :api,
   module: P2PDocs.API.Server,
   ets_table: :api_server_state,
   port: 4000
+
+# config :logger, :default_handler, false

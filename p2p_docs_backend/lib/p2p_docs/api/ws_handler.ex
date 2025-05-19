@@ -60,12 +60,9 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   def websocket_info({:send, msg}, state) do
-    {vc, _d} = P2PDocs.Network.CausalBroadcast.get_vc_and_d_state()
-
     operation = %{
       type: "operations",
       operations: msg,
-      version: Jason.encode!(vc)
     }
 
     {:reply, {:text, Jason.encode!(operation)}, state}
@@ -99,7 +96,6 @@ defmodule P2PDocs.API.WebSocket.Handler do
            "client_id" => _client_id,
            "index" => index,
            "type" => "insert",
-           "version" => _vc
          },
          state
        ) do
@@ -108,7 +104,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp handle_message(
-         %{"client_id" => _client_id, "index" => index, "type" => "delete", "version" => _vc},
+         %{"client_id" => _client_id, "index" => index, "type" => "delete"},
          state
        ) do
     if index != "marker" do
@@ -140,7 +136,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp handle_message(
-         %{"client_id" => _client_id, "index" => index, "type" => "delete", "version" => _vc},
+         %{"client_id" => _client_id, "index" => index, "type" => "delete"},
          state
        ) do
     if index != "marker" do
@@ -178,7 +174,6 @@ defmodule P2PDocs.API.WebSocket.Handler do
   end
 
   defp send_initial_message(state) do
-    {vc, _d} = P2PDocs.Network.CausalBroadcast.get_vc_and_d_state()
     crdt = P2PDocs.CRDT.Manager.get_state()
     # Get the CRDT state from the CRDT Manager
     text =
@@ -192,7 +187,6 @@ defmodule P2PDocs.API.WebSocket.Handler do
 
     initial_message = %{
       type: "init",
-      version: Jason.encode!(vc),
       content: text,
       client_id: node()
     }

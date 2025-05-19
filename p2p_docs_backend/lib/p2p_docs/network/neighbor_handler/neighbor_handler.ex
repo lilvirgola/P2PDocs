@@ -157,7 +157,13 @@ defmodule P2PDocs.Network.NeighborHandler do
     for neighbor <- state.neighbors do
       remove_neighbor(neighbor)
     end
-      {:noreply, state}
+
+    {:noreply, state}
+  end
+
+    def handle_cast(_, state) do
+    Logger.error("Message not valid!")
+    {:noreply, state}
   end
 
   def join(peer_id) do
@@ -266,5 +272,4 @@ defmodule P2PDocs.Network.NeighborHandler do
 
     :ok
   end
-
 end

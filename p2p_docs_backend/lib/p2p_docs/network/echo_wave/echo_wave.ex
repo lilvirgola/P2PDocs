@@ -12,7 +12,8 @@ defmodule P2PDocs.Network.EchoWave do
 
   defstruct id: nil,
             neighbors: [],
-            pending_waves: %{}
+            pending_waves: %{},
+            past_waves: %{}
 
   defmodule Wave do
     defstruct parent: nil,
@@ -63,36 +64,38 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   def handle_cast({:token, from, wave_id, count, msg}, state) do
-    new_state =
-      case Map.pop(state.pending_waves, wave_id) do
-        {nil, pending} ->
-          Logger.debug(
-            "#{state.id} received #{inspect(wave_id)} token for the first time, from #{inspect(from)}"
-          )
+    unless Map.has_key?(state.past_waves, wave_id) do
+      new_state =
+        case Map.pop(state.pending_waves, wave_id) do
+          {nil, pending} ->
+            handle_new_wave(state, from, wave_id, count, msg, pending)
 
-          CausalBroadcast.deliver_to_causal(msg)
-          children = state.neighbors -- [from]
-          Enum.each(children, &send_token(state, &1, wave_id, msg))
+          {prev = %Wave{}, pending} ->
+            handle_existing_wave(state, from, wave_id, count, prev, pending)
+        end
 
-          wave = %Wave{parent: from, remaining: children, count: count + 1}
-          %{state | pending_waves: Map.put(pending, wave_id, wave)}
+      new_state =
+        if report_back?(new_state, wave_id) do
+          Logger.debug("#{state.id} removes #{inspect(wave_id)} from its pending waves")
 
-        {prev = %Wave{}, pending} ->
-          Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
+          parent = Map.get(new_state.pending_waves, wave_id).parent
 
-          updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
-          %{state | pending_waves: Map.put(pending, wave_id, updated)}
-      end
+          %__MODULE__{
+            new_state
+            | pending_waves: Map.delete(new_state.pending_waves, wave_id),
+              past_waves: Map.put(new_state.past_waves, wave_id, parent)
+          }
+        else
+          new_state
+        end
 
-    new_state =
-      if report_back?(new_state, wave_id) do
-        Logger.debug("#{state.id} removes #{inspect(wave_id)} from its pending waves")
-        %{new_state | pending_waves: Map.delete(new_state.pending_waves, wave_id)}
-      else
-        new_state
-      end
+      {:noreply, new_state}
+    else
+      Logger.debug("#{state.id} has already closed wave #{inspect(wave_id)}")
 
-    {:noreply, new_state}
+      send_back(state, state.past_waves[wave_id], wave_id, count)
+      {:noreply, state}
+    end
   end
 
   def handle_cast({:update, neighbors}, state), do: {:noreply, %{state | neighbors: neighbors}}
@@ -105,6 +108,11 @@ defmodule P2PDocs.Network.EchoWave do
 
   def handle_cast({:wave_complete, _, wave_id}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended")
+    {:noreply, state}
+  end
+
+  def handle_cast(_, state) do
+    Logger.error("Message not valid!")
     {:noreply, state}
   end
 
@@ -149,5 +157,25 @@ defmodule P2PDocs.Network.EchoWave do
       __MODULE__,
       {:token, state.id, wave_id, count, nil}
     )
+  end
+
+  defp handle_new_wave(state, from, wave_id, count, msg, pending) do
+    Logger.debug(
+      "#{state.id} received #{inspect(wave_id)} token for the first time, from #{inspect(from)}"
+    )
+
+    CausalBroadcast.deliver_to_causal(msg)
+    children = state.neighbors -- [from]
+    Enum.each(children, &send_token(state, &1, wave_id, msg))
+
+    wave = %Wave{parent: from, remaining: children, count: count + 1}
+    %{state | pending_waves: Map.put(pending, wave_id, wave)}
+  end
+
+  defp handle_existing_wave(state, from, wave_id, count, prev, pending) do
+    Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
+
+    updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
+    %{state | pending_waves: Map.put(pending, wave_id, updated)}
   end
 end

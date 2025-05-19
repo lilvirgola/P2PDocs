@@ -96,6 +96,21 @@ defmodule P2PDocs.Network.ReliableTransport do
   end
 
   @impl true
+  def handle_cast(:crash, state) do
+    {:noreply, %__MODULE__{state | crash: true}}
+  end
+
+  @impl true
+  def handle_cast(:restore, state) do
+    {:noreply, %__MODULE__{state | crash: false}}
+  end
+
+  def handle_cast(_, state) do
+    Logger.error("Message not valid!")
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info({:timeout, msg_id}, state) do
     case Map.get(state.pending_ack, msg_id) do
       nil ->
@@ -117,14 +132,6 @@ defmodule P2PDocs.Network.ReliableTransport do
         new_pending = Map.put(state.pending_ack, msg_id, %{info | timer_ref: new_timer})
         {:noreply, %{state | pending_ack: new_pending}}
     end
-  end
-
-  def handle_cast(:crash, state) do
-    {:noreply, %__MODULE__{state | crash: true}}
-  end
-
-  def handle_cast(:restore, state) do
-    {:noreply, %__MODULE__{state | crash: false}}
   end
 
   @impl true

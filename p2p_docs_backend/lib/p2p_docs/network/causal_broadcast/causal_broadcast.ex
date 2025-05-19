@@ -181,6 +181,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
      }}
   end
 
+  def handle_cast(_, state) do
+    Logger.error("Message not valid!")
+    {:noreply, state}
+  end
+
   @doc """
   Handles synchronous calls to get the state of the server.
   This includes the vector clock, delivery counters, and pending messages.
@@ -195,11 +200,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
   def handle_call({:get_vc_and_d}, _from, state) do
     Logger.debug("Node #{inspect(state.my_id)} is sending its vector clock and d!")
     {:reply, {state.t, state.d}, state}
-  end
-
-  @impl true
-  def handle_call(:crash, _from, _state) do
-    raise "simulated crash"
   end
 
   # Private helper functions
