@@ -9,7 +9,7 @@ defmodule EchoWaveTest do
   @moduletag :capture_log
 
   # Set testing parameters
-  @size 2 ** 5
+  @size 2 ** 12
   @gamma 1.2
 
   setup [:set_mox_from_context, :verify_on_exit!, :setup_mocks]

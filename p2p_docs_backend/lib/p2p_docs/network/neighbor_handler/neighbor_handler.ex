@@ -161,11 +161,13 @@ defmodule P2PDocs.Network.NeighborHandler do
     {:noreply, state}
   end
 
+  @impl true
   def handle_cast(_, state) do
     Logger.error("Message not valid!")
     {:noreply, state}
   end
 
+  @callback join(peer_id :: any) :: :ok | {:error, any}
   def join(peer_id) do
     case Node.connect(peer_id) do
       true ->
@@ -190,6 +192,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @callback add_neighbor(peer_id :: any) :: :ok | {:error, any}
   def add_neighbor(peer_id) do
     case Node.connect(peer_id) do
       true ->
@@ -212,6 +215,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @callback remove_neighbor(peer_id :: any) :: :ok | {:error, any}
   def remove_neighbor(peer_id) do
     case Node.disconnect(peer_id) do
       true ->
@@ -236,6 +240,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @callback leave() :: :ok
   def leave() do
     GenServer.cast(__MODULE__, {:leave_all})
   end

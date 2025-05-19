@@ -12,9 +12,10 @@ defmodule P2PDocs.MixProject do
       docs: [
         main: "P2PDocs.Application",
         extras: ["README.md"],
-        formatters: ["html", "epub"],
         favicon: "assets/favicon.png",
-        logo: "assets/logo.png"
+        logo: "assets/logo.png",
+        authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"],
+        deps: deps()
       ]
     ]
   end
