@@ -78,6 +78,7 @@ defmodule P2PDocs.Network.ReliableTransport do
       GenServer.cast({__MODULE__, from}, {:ack, msg_id})
       {:noreply, %__MODULE__{state | past_msg: MapSet.put(state.past_msg, msg_id)}}
     else
+      GenServer.cast({__MODULE__, from}, {:ack, msg_id})
       {:noreply, state}
     end
   end
