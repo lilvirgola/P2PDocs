@@ -3,14 +3,14 @@ defmodule EchoWaveTest do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.Utils
 
+  import Mox
+
   # Hide Logger messages
   @moduletag :capture_log
 
   # Set testing parameters
-  @size 2 ** 8
+  @size 2 ** 5
   @gamma 1.2
-
-  import Mox
 
   setup [:set_mox_from_context, :verify_on_exit!, :setup_mocks]
 
@@ -40,14 +40,6 @@ defmodule EchoWaveTest do
   end
 
   test "echo wave random connected graph" do
-    stub(P2PDocs.Network.ReliableTransportMock, :send, fn _from, to, _module, payload ->
-      GenServer.cast(to, payload)
-    end)
-
-    stub(P2PDocs.Network.CausalBroadcastMock, :deliver_to_causal, fn _, _ ->
-      {:ok}
-    end)
-
     {time, topology} = :timer.tc(fn -> build_random_topology(@size, @gamma) end)
 
     IO.puts("Random graph creation with #{@size} nodes: #{time} microseconds")

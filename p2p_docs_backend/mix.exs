@@ -10,9 +10,11 @@ defmodule P2PDocs.MixProject do
       deps: deps(),
       name: "P2PDocs",
       docs: [
-        main: "P2PDocs",
+        main: "P2PDocs.Application",
         extras: ["README.md"],
-        formatters: ["html", "epub"]
+        formatters: ["html", "epub"],
+        favicon: "assets/favicon.png",
+        logo: "assets/logo.png"
       ]
     ]
   end

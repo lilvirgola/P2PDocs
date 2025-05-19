@@ -166,7 +166,7 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   defp causal_broadcast() do
-    Application.get_env(:p2p_docs, :causal_broadcast, CausalBroadcast)
+    Application.get_env(:p2p_docs, :causal_broadcast, CausalBroadcast)[:module]
   end
 
   defp handle_existing_wave(state, from, wave_id, count, prev, pending) do
