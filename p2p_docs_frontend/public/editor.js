@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let clientId = null;
   let pendingOperations = [];
   let localPendingOperations = [];
-  let lastKnownVersion = 0;
   // Initialize editor as non-editable
   editor.contentEditable = false;
   wsClient.onMessage(handleServerMessage);
@@ -184,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
     clientId = null;
     pendingOperations = [];
     
-    lastKnownVersion = 0;
     editor.innerHTML = '';
     document.getElementById('connect-form').style.display = 'block';
     document.getElementById('disconnect-form').style.display = 'none';
@@ -224,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleServerMessage(data) {
     if (data.type === 'init') {
       clientId = data.client_id;
-      lastKnownVersion = data.version || 0;
       editor.innerHTML = data.content || '';
       editor.contentEditable = true; // Enable editing after init
       editor.normalize(); // Normalize text nodes
@@ -240,13 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Handle CRDT operations from server
       isRemoteUpdate = true;
       console.log('[Editor] Received operations:', data.operations);
-      if (data.version!== lastKnownVersion) {
-        applyOperations(data.operations);
-      }
-      // Update last known version
-      if (data.version) {
-        lastKnownVersion = data.version;
-      }
+      applyOperations(data.operations);
       
       isRemoteUpdate = false;
     }
@@ -281,8 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       type: 'insert',
       index: index,
       char: e.data,
-      client_id: clientId,
-      version: lastKnownVersion
+      client_id: clientId
     };
 
     if (wsClient.send(operation)) {
@@ -294,8 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const operation = {
         type: 'delete',
         index: index,
-        client_id: clientId,
-        version: lastKnownVersion
+        client_id: clientId
       };
 
       if (wsClient.send(operation)) {
@@ -434,16 +423,14 @@ function applyOperations(op) {
       return {
         type: 'insert',
         index: index,
-        char: e.data,
-        version: lastKnownVersion
+        char: e.data
       };
     } else if (e.inputType === 'deleteContentBackward') {
       const index = getCursorIndex(editor, range.startContainer, range.startOffset) + 1;
       if (index >= 1) {
         return {
           type: 'delete',
-          index: index,
-          version: lastKnownVersion
+          index: index
         };
       }
     }
