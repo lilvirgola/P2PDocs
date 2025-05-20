@@ -101,6 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const tokenInput = document.getElementById("token-input");
   const disconnectBtn = document.getElementById("disconnect-btn");
   const peerAddressInput = document.getElementById("peer-address");
+  const neighborsBtn = document.getElementById("neighbors-btn");
+  const neighborsDiv = document.getElementById("neighbors");
+  const neighborsInput = document.getElementById("neighbors-input");
   let prevValue = editor.value;
   // CSS fixes for overflow
   Object.assign(editor.style, {
@@ -120,8 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
   wsClient.connect();
 
   const autoConnect = () => {
-    let peerId = getCookie("peer_id");
-    console.log("Peer ID from cookie:", peerId);
+    let peerId = getQueryParam("peer_id");
+    console.log("Peer ID from URL:", peerId);
 
     // Wait for WebSocket to be ready
     const tryConnect = () => {
@@ -131,6 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (peerId) {
           peerAddressInput.value = peerId;
           connectBtn.click();
+        }
+        else{
+          disconnectBtn.click();
         }
       } else {
         setTimeout(tryConnect, 50);
@@ -178,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Disconnect button handler
   disconnectBtn.addEventListener("click", () => {
-    const peerId = getCookie("peer_id");
+    const peerId = getQueryParam("peer_id");
     if (peerId && peerId !== clientId) {
       wsClient.send({ type: "disconnect", peer_id: peerId });
     } else {
@@ -193,8 +199,10 @@ document.addEventListener("DOMContentLoaded", () => {
     tokenDiv.style.display = "none";
     editor.style.display = "none";
 
-    // Clear the cookie
-    deleteCookie("peer_id");
+    // Remove peer_id from URL
+    const url = new URL(window.location);
+    url.searchParams.delete('peer_id');
+    window.history.replaceState({}, '', url);
   });
 
   // Share button handler
@@ -207,15 +215,27 @@ document.addEventListener("DOMContentLoaded", () => {
     tokenInput.value = clientId;
   });
 
+  neighborsBtn.addEventListener("click", () => {
+    if (neighborsDiv.style.display === "block") {
+      neighborsDiv.style.display = "none";
+    } else {
+      neighborsDiv.style.display = "block";
+    }
+  });
+
   // function to connect to the server for a new file or from the state of an other peer
   function connectToServer(peerAddress) {
     // Register message handler
 
     if (peerAddress) {
       wsClient.send({ type: "connect", peer_address: peerAddress });
-      setCookie("peer_id", peerAddress, 7);
+      const url = new URL(window.location);
+      url.searchParams.set('peer_id', peerAddress);
+      window.history.replaceState({}, '', url);
     } else {
-      setCookie("peer_id", "local", 7);
+      const url = new URL(window.location);
+      url.searchParams.set('peer_id', 'local');
+      window.history.replaceState({}, '', url);
     }
     // get client ID
     wsClient.send({ type: "get_client_id" });
@@ -227,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
       clientId = data.client_id;
       editor.value = data.content || "";
       editor.readOnly = false; // Enable editing after init
+      neighborsInput.value = data.neighbors || "";
       //editor.normalize(); // Normalize text nodes
 
       // Process any locally queued operations
@@ -360,22 +381,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Cookie utility functions
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(";").shift();
+  function getQueryParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
   }
 
-  function setCookie(name, value, days) {
-    const date = new Date();
-    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-    const expires = `expires=${date.toUTCString()}`;
-    document.cookie = `${name}=${value}; ${expires}; path=/`;
-  }
-
-  function deleteCookie(name) {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-  }
   autoConnect();
 });

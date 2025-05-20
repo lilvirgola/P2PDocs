@@ -2,21 +2,14 @@ defmodule P2PDocs.API.WebSocket.Handler do
   require Logger
   alias P2PDocs.CRDT.Manager
   alias P2PDocs.PubSub
+  alias P2PDocs.Network.NeighborHandler
 
   def init(req, state) do
     {:cowboy_websocket, req, state}
   end
 
-  def send_init(plain_text) do
-    # Send the initial message to the client
-
-    msg = %{
-      type: "init",
-      content: plain_text |> Enum.join(""),
-      client_id: node()
-    }
-
-    PubSub.broadcast(msg)
+  def send_init() do
+    PubSub.broadcast_init()
   end
 
   def remote_insert(index, value) do
@@ -71,6 +64,10 @@ defmodule P2PDocs.API.WebSocket.Handler do
     {:reply, {:text, "{\"type\":\"ping\"}"}, state}
   end
 
+  def websocket_info({:send_init}, state) do
+    send_initial_message(state)
+  end
+
   def websocket_info({:send, msg}, state) do
     operation = %{
       type: "operations",
@@ -79,6 +76,8 @@ defmodule P2PDocs.API.WebSocket.Handler do
 
     {:reply, {:text, Jason.encode!(operation)}, state}
   end
+
+
 
   def websocket_info(_info, state) do
     {:ok, state}
@@ -195,11 +194,14 @@ defmodule P2PDocs.API.WebSocket.Handler do
         ""
       end
 
+
+
     Logger.debug("Sending initial message to client: #{inspect(text)}")
 
     initial_message = %{
       type: "init",
       content: text,
+      neighbors: NeighborHandler.get_neighbors(),
       client_id: node()
     }
 

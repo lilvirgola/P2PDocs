@@ -19,6 +19,10 @@ defmodule P2PDocs.PubSub do
     GenServer.cast(__MODULE__, {:broadcast, msg})
   end
 
+  def broadcast_init() do
+    GenServer.cast(__MODULE__, {:broadcast_init})
+  end
+
   # Server Callbacks
 
   def init(state) do
@@ -39,6 +43,13 @@ defmodule P2PDocs.PubSub do
       send(pid, {:send, Jason.encode!(msg)})
     end)
 
+    {:noreply, state}
+  end
+
+  def handle_cast({:broadcast_init}, state) do
+    Enum.each(state, fn pid ->
+      send(pid, {:send_init})
+    end)
     {:noreply, state}
   end
 
