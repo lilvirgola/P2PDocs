@@ -21,6 +21,10 @@ defmodule P2PDocs.Network.NeighborHandler do
     GenServer.start_link(__MODULE__, peer_id, name: __MODULE__)
   end
 
+  def get_neighbors() do
+    GenServer.call(__MODULE__, :get_neighbors)
+  end
+
   @impl true
   def init(my_id) do
     Logger.debug("Starting NeighborHandler module for node #{inspect(my_id)}")
@@ -83,7 +87,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
-
+        #update the frontend
+        P2PDocs.API.WebSocket.Handler.send_init()
         # If the node is already a neighbor, just return the state
         {:noreply, state}
       else
@@ -106,7 +111,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
-
+        #update the frontend
+        P2PDocs.API.WebSocket.Handler.send_init()
         new_state = %{state | neighbors: new_neighbors}
         # Store the updated state in ETS
         :ets.insert(@table_name, {state.peer_id, new_state})
@@ -126,6 +132,8 @@ defmodule P2PDocs.Network.NeighborHandler do
       EchoWave.update_neighbors(new_neighbors)
       Logger.info("Node #{inspect(peer_id)} leaved the network.")
       new_state = %{state | neighbors: new_neighbors}
+      #update the frontend
+      P2PDocs.API.WebSocket.Handler.send_init()
       # Store the updated state in ETS
       :ets.insert(@table_name, {state.peer_id, new_state})
       {:noreply, new_state}
@@ -157,7 +165,8 @@ defmodule P2PDocs.Network.NeighborHandler do
     for neighbor <- state.neighbors do
       remove_neighbor(neighbor)
     end
-
+    #update the frontend
+    P2PDocs.API.WebSocket.Handler.send_init()
     {:noreply, state}
   end
 
@@ -276,5 +285,10 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
 
     :ok
+  end
+
+  @impl true
+  def handle_call(:get_neighbors, _from, state) do
+    {:reply, state.neighbors, state}
   end
 end

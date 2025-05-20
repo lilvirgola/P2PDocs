@@ -105,7 +105,7 @@ defmodule P2PDocs.CRDT.Manager do
 
     new_saver = auto_saver().apply_state_update(state.auto_saver, new_crdt_with_id)
 
-    ws_handler().send_init(crdt_text().to_plain_text(new_crdt_with_id))
+    ws_handler().send_init()
 
     new_state = %__MODULE__{
       state
