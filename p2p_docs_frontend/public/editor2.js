@@ -253,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   editor.addEventListener("beforeinput", (e) => {
     const { inputType, data, target } = e;
-  const oldVal = prevValue;
+  const oldVal = e.target.value;
   const start = target.selectionStart;
   const end   = target.selectionEnd;
 
@@ -284,7 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let deletedText = '';
     let deletePos   = start;
 
-    console.log(inputType, start, end);
+    console.log(inputType, start, end, oldVal);
 
     if(start < end){
       deletedText = oldVal.slice(start, end);
@@ -324,10 +324,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
   );
 
-  editor.addEventListener("input", (e) => {
-    prevValue = e.target.value;
-
-  });
 
   /*
   // Handle local edits
@@ -398,14 +394,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function insertAt(index, char) {
     index = index - 1; // zero-based
     toEdit = editor.value;
-    editor.value = toEdit.splice(0,index) + char + toEdit.splice(index);
+    editor.value = toEdit.slice(0,index) + char + toEdit.slice(index);
     //if (isRemoteUpdate) restoreCursorPosition();
   }
 
   function deleteAt(index) {
     
     toEdit = editor.value;
-    editor.value = toEdit.splice(0,index) + toEdit.splice(index+1);
+    editor.value = toEdit.slice(0,index) + toEdit.slice(index+1);
     if (isRemoteUpdate) {
       //restoreCursorPosition();
     }
