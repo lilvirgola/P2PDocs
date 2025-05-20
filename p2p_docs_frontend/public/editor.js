@@ -101,6 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const tokenInput = document.getElementById("token-input");
   const disconnectBtn = document.getElementById("disconnect-btn");
   const peerAddressInput = document.getElementById("peer-address");
+  let prevValue = editor.value;
   // CSS fixes for overflow
   Object.assign(editor.style, {
     whiteSpace: "pre-wrap",
@@ -114,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let pendingOperations = [];
   let localPendingOperations = [];
   // Initialize editor as non-editable
-  editor.contentEditable = false;
+  editor.readOnly = true;
   wsClient.onMessage(handleServerMessage);
   wsClient.connect();
 
@@ -186,7 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
     clientId = null;
     pendingOperations = [];
 
-    editor.innerHTML = "";
+    editor.value = "";
     document.getElementById("connect-form").style.display = "block";
     document.getElementById("disconnect-form").style.display = "none";
     tokenDiv.style.display = "none";
@@ -225,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
       clientId = data.client_id;
       editor.value = data.content || "";
       editor.readOnly = false; // Enable editing after init
-      
+      //editor.normalize(); // Normalize text nodes
 
       // Process any locally queued operations
       localPendingOperations.forEach((op) => {
@@ -250,6 +251,80 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  editor.addEventListener("beforeinput", (e) => {
+    const { inputType, data, target } = e;
+  const oldVal = e.target.value;
+  const start = target.selectionStart;
+  const end   = target.selectionEnd;
+
+  // figure out what (if anything) is being inserted
+  let inserted = data;
+  if (!inserted && inputType === 'insertLineBreak') {
+    // Enter key in a textarea
+    inserted = '\n';
+  }
+
+  // INSERTIONS (typing, paste, enter, etc.)
+  if (inputType.startsWith('insert') && inserted) {
+    const insertPos = start;
+    for (let i = 0; i < inserted.length; i++) {
+     let operation = ({
+        type:     'insert',
+        char:     inserted[i] === '\n' ? '\n' : inserted[i],
+        index: insertPos + i + 1,
+        client_id: clientId
+      });
+      if (wsClient.send(operation)) {
+        pendingOperations.push(operation);
+      }
+    }
+  }
+  // DELETIONS (backspace, delete key, cut, selection delete)
+  else if (inputType.startsWith('delete')) {
+    let deletedText = '';
+    let deletePos   = start;
+
+    //console.log(inputType, start, end, oldVal);
+
+    if(start < end){
+      deletedText = oldVal.slice(start, end);
+      deletePos   = start;
+    }else{
+
+    switch (inputType) {
+      case 'deleteContentBackward':
+        deletePos   = start - 1;
+        deletedText = oldVal.charAt(deletePos);
+        break;
+      case 'deleteContentForward':
+        deletePos   = start;
+        deletedText = oldVal.charAt(deletePos);
+        break;
+      default:
+        // deleteByCut, deleteContent, deleteByDrag, etc.
+        deletedText = oldVal.slice(start, end);
+        deletePos   = start;
+    }
+  }
+
+    for (let i = 0; i < deletedText.length; i++) {
+      let operation = ({
+        type:     'delete',
+        index: deletePos + 1,
+        client_id: clientId
+      });
+      if (wsClient.send(operation)) {
+        pendingOperations.push(operation);
+      }
+    }
+  }
+  // (you can add other inputTypes if you care about undo/formatting/etc.)
+  }
+  
+  );
+
+
+  /*
   // Handle local edits
   editor.addEventListener("input", (e) => {
     if (isRemoteUpdate || !clientId) {
@@ -264,43 +339,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const selection = window.getSelection();
     const range = selection.getRangeAt(0);
 
-    if (e.inputType === "insertText") {
-      const index = getCursorIndex(
-        editor,
-        range.startContainer,
-        range.startOffset
-      ); // 1-based
+    let inserted = e.data;
+    if(!inserted && e.inputType === "insertLineBreak" ){
+      inserted = "\\n";
+    }
+
+    if (e.inputType.startsWith("insert") && inserted) {
+      const index = e.target.selectionStart;
       const operation = {
         type: "insert",
         index: index,
-        char: e.data,
+        char: inserted,
         client_id: clientId,
       };
 
       if (wsClient.send(operation)) {
         pendingOperations.push(operation);
       }
-    } else if (
-      e.inputType === "insertLineBreak" ||
-      e.inputType === "insertParagraph"
-    ) {
-      const index = getCursorIndex(
-        editor,
-        range.startContainer,
-        range.startOffset
-      ) + 1;
-      const operation = {
-        type: "insert",
-        index: index,
-        char: "\n",
-        client_id: clientId,
-      };
-      if (wsClient.send(operation)) {
-        pendingOperations.push(operation);
-      }
     } else if (e.inputType === "deleteContentBackward") {
-      const index =
-        getCursorIndex(editor, range.startContainer, range.startOffset) + 1; // 1-based
+      const index = e.target.selectionStart + 1; // 1-based
       if (index >= 1) {
         // Minimum index is 1
         const operation = {
@@ -315,39 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
-
-  // More accurate cursor position handling
-  function getCursorIndex(editor, node, offset) {
-    const range = document.createRange();
-    range.setStart(editor, 0);
-    range.setEnd(node, offset);
-
-    // Handle cases where the editor might contain other elements
-    let text = "";
-    const treeWalker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: function (node) {
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      },
-      false
-    );
-
-    let currentNode = treeWalker.nextNode();
-    while (currentNode) {
-      if (currentNode === range.endContainer) {
-        text += currentNode.textContent.substring(0, range.endOffset);
-        break;
-      } else {
-        text += currentNode.textContent;
-      }
-      currentNode = treeWalker.nextNode();
-    }
-
-    return text.length;
-  }
+  */
 
   function applyOperations(op) {
     isRemoteUpdate = true;
@@ -361,103 +386,23 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("[Editor] Applying delete op:", op);
       deleteAt(op["index"]);
     }
-    editor.normalize(); // Normalize text nodes
+    //editor.normalize(); // Normalize text nodes
     isRemoteUpdate = false;
   }
 
   function insertAt(index, char) {
     index = index - 1; // zero-based
-    const range = document.createRange();
-
-    if (editor.childNodes[0].nodeName == "BR"){
-      editor.removeChild(editor.childNodes[0])
-    }
-
-    if (char === "\n") {
-      // Create a <br> for newline
-      const br = document.createElement("br");
-      let pos = 0;
-      let inserted = false;
-
-      for (let node of editor.childNodes) {
-        if (node.nodeType !== Node.TEXT_NODE && node.nodeName !== "BR") {
-          continue;
-        }
-        const length = node.nodeType === Node.TEXT_NODE ? node.length : 1;
-        if (pos + length >= index) {
-          // split before this node
-          if (node.nodeType === Node.TEXT_NODE) {
-            const offset = index - pos;
-            range.setStart(node, offset);
-            range.setEnd(node, offset);
-          } else {
-            // at a <br>, insert right before it
-            range.setStartBefore(node);
-            range.setEndBefore(node);
-          }
-          range.insertNode(br);
-          inserted = true;
-          break;
-        }
-        pos += length;
-      }
-      if (!inserted) {
-        editor.appendChild(br);
-      }
-    } else {
-      // existing text-node insertion
-      const textNode = document.createTextNode(char);
-      let pos = 0;
-      let inserted = false;
-
-      for (let node of editor.childNodes) {
-        if (node.nodeType !== Node.TEXT_NODE) continue;
-        const length = node.length;
-        if (pos + length >= index) {
-          const offset = index - pos;
-          range.setStart(node, offset);
-          range.setEnd(node, offset);
-          range.insertNode(textNode);
-          inserted = true;
-          break;
-        }
-        pos += length;
-      }
-      if (!inserted) {
-        editor.appendChild(textNode);
-      }
-    }
-
-    if (isRemoteUpdate) restoreCursorPosition();
+    toEdit = editor.value;
+    editor.value = toEdit.slice(0,index) + char + toEdit.slice(index);
+    //if (isRemoteUpdate) restoreCursorPosition();
   }
 
   function deleteAt(index) {
-    // No need to convert to 0-based since we're using 1-based consistently
-    let pos = 0;
-
-    for (let i = 0; i < editor.childNodes.length; i++) {
-      const node = editor.childNodes[i];
-
-      if (node.nodeType !== Node.TEXT_NODE && node.nodeName !== "BR") {
-        continue;
-      }
-
-      const length = node.nodeType === Node.TEXT_NODE ? node.length : 1;
-      if (pos + length >= index) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const offset = index - pos - 1;
-          node.deleteData(offset, 1);
-        } else {
-          // remove the <br>
-          node.parentNode.removeChild(node);
-        }
-        break;
-      }
-      pos += nodeLength;
-    }
-
+    index = index - 1;
+    toEdit = editor.value;
+    editor.value = toEdit.slice(0,index) + toEdit.slice(index+1);
     if (isRemoteUpdate) {
-      restoreCursorPosition();
+      //restoreCursorPosition();
     }
   }
 
@@ -466,29 +411,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const range = selection.getRangeAt(0);
 
     if (e.inputType === "insertText") {
-      const index = getCursorIndex(
-        editor,
-        range.startContainer,
-        range.startOffset
-      );
+      index = e.target.selectionStart;
       return {
         type: "insert",
         index: index,
         char: e.data,
       };
-    } else if (
-      e.inputType === "insertLineBreak" ||
-      e.inputType === "insertParagraph"
-    ) {
-      const index = getCursorIndex(
-        editor,
-        range.startContainer,
-        range.startOffset
-      );
-      return { type: "insert", index: index, char: "\n" };
     } else if (e.inputType === "deleteContentBackward") {
-      const index =
-        getCursorIndex(editor, range.startContainer, range.startOffset) + 1;
+      const index = e.target.selectionStart + 1;
       if (index >= 1) {
         return {
           type: "delete",

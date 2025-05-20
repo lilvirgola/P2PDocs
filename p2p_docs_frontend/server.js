@@ -31,7 +31,7 @@ server.on('upgrade', proxy.upgrade);
 
 // Route principale
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'editor2.html'));
+  res.sendFile(path.join(__dirname, 'public', 'editor.html'));
 });
 
 // 404 handler

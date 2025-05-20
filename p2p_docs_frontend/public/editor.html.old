@@ -51,9 +51,9 @@
   </div>
 
   <h1 class="text-2xl font-bold mb-4">Collaborative Editor</h1>
-  <textarea id="editor"
-       class="border border-gray-300 p-4 min-h-[500px] rounded-md shadow focus:outline-none hidden"></textarea>
+  <div id="editor" contenteditable="true"
+       class="border border-gray-300 p-4 min-h-[500px] rounded-md shadow focus:outline-none hidden"></div>
 
-  <script src="editor2.js"></script>
+  <script src="editor.js"></script>
 </body>
 </html>
