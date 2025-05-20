@@ -2,8 +2,10 @@ defmodule P2PDocs.CRDT.Manager do
   use GenServer
   require Logger
 
-  alias P2PDocs.CRDT.CrdtText, as: CrdtText
+  alias P2PDocs.Network.CausalBroadcast
+  alias P2PDocs.CRDT.CrdtText
   alias P2PDocs.CRDT.AutoSaver
+  alias P2PDocs.API.WebSocket.Handler
 
   @table_name Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] ||
                 :crdt_manager_state
@@ -34,8 +36,8 @@ defmodule P2PDocs.CRDT.Manager do
           # No state found in ETS, create new state
           initial_state = %__MODULE__{
             peer_id: peer_id,
-            crdt: CrdtText.new(peer_id),
-            auto_saver: AutoSaver.new(10, "./saves/" <> inspect(peer_id) <> ".txt")
+            crdt: crdt_text().new(peer_id),
+            auto_saver: auto_saver().new(10, "./saves/" <> inspect(peer_id) <> ".txt")
           }
 
           # Store the initial state in the ETS table
@@ -82,7 +84,7 @@ defmodule P2PDocs.CRDT.Manager do
 
   @impl true
   def handle_call(:get_state, _from, state) do
-    ans = CrdtText.to_plain_text(state.crdt)
+    ans = crdt_text().to_plain_text(state.crdt)
     {:reply, ans, state}
   end
 
@@ -96,15 +98,14 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:upd_crdt, new_crdt}, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is updating its crdt state!")
 
-    new_crdt_with_id = %CrdtText{
+    new_crdt_with_id = %{
       new_crdt
       | peer_id: state.peer_id
     }
 
-    new_saver = AutoSaver.apply_state_update(state.auto_saver, new_crdt_with_id)
+    new_saver = auto_saver().apply_state_update(state.auto_saver, new_crdt_with_id)
 
-    P2PDocs.API.WebSocket.Handler.send_init(CrdtText.to_plain_text(new_crdt_with_id))
-
+    ws_handler().send_init(crdt_text().to_plain_text(new_crdt_with_id))
 
     new_state = %__MODULE__{
       state
@@ -123,11 +124,11 @@ defmodule P2PDocs.CRDT.Manager do
       "Node #{inspect(state.peer_id)} is applying the remote insert of #{inspect(char)}!"
     )
 
-    {pos_for_frontend, new_crdt} = CrdtText.apply_remote_insert(state.crdt, char)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {pos_for_frontend, new_crdt} = crdt_text().apply_remote_insert(state.crdt, char)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
     if pos_for_frontend do
-      P2PDocs.API.WebSocket.Handler.remote_insert(pos_for_frontend, char.value)
+      ws_handler().remote_insert(pos_for_frontend, char.value)
     end
 
     new_state = %__MODULE__{
@@ -147,11 +148,11 @@ defmodule P2PDocs.CRDT.Manager do
       "Node #{inspect(state.peer_id)} is applying the remote delete of #{inspect(target_id)}!"
     )
 
-    {pos_for_frontend, new_crdt} = CrdtText.apply_remote_delete(state.crdt, target_id)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {pos_for_frontend, new_crdt} = crdt_text().apply_remote_delete(state.crdt, target_id)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
     if pos_for_frontend do
-      P2PDocs.API.WebSocket.Handler.remote_delete(pos_for_frontend)
+      ws_handler().remote_delete(pos_for_frontend)
     end
 
     new_state = %__MODULE__{
@@ -169,8 +170,8 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:local_insert, index, value}, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is applying the local insert at #{index}!")
 
-    {new_char, new_crdt} = CrdtText.insert_local(state.crdt, index, value)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {new_char, new_crdt} = crdt_text().insert_local(state.crdt, index, value)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
     new_state = %__MODULE__{
       state
@@ -178,7 +179,7 @@ defmodule P2PDocs.CRDT.Manager do
         auto_saver: new_saver
     }
 
-    P2PDocs.Network.CausalBroadcast.broadcast({:remote_insert, new_char})
+    causal_broadcast().broadcast({:remote_insert, new_char})
     # Store the updated state in ETS
     :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
@@ -188,8 +189,8 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:local_delete, index}, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is applying the local delete!")
 
-    {target_id, new_crdt} = CrdtText.delete_local(state.crdt, index)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {target_id, new_crdt} = crdt_text().delete_local(state.crdt, index)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
     new_state = %__MODULE__{
       state
@@ -197,7 +198,7 @@ defmodule P2PDocs.CRDT.Manager do
         auto_saver: new_saver
     }
 
-    P2PDocs.Network.CausalBroadcast.broadcast({:remote_delete, target_id})
+    causal_broadcast().broadcast({:remote_delete, target_id})
     # Store the updated state in ETS
     :ets.insert(@table_name, {state.peer_id, new_state})
     {:noreply, new_state}
@@ -216,5 +217,21 @@ defmodule P2PDocs.CRDT.Manager do
 
     # placeholder for any cleanup tasks
     :ok
+  end
+
+  defp crdt_text() do
+    Application.get_env(:p2p_docs, :crdt_text, CrdtText)
+  end
+
+  defp auto_saver() do
+    Application.get_env(:p2p_docs, :auto_saver, AutoSaver)
+  end
+
+  defp causal_broadcast() do
+    Application.get_env(:p2p_docs, :causal_broadcast, CausalBroadcast)[:module]
+  end
+
+  defp ws_handler() do
+    Application.get_env(:p2p_docs, :ws_handler, Handler)
   end
 end

@@ -1,23 +1,8 @@
-defmodule CustomBroadcast do
-  def sendMessage(_op, _payload) do
-    :ok
-  end
-end
-
-defmodule Math do
-  def ilog(n) when n < 2 do
-    0
-  end
-
-  def ilog(n) do
-    1 + ilog(div(n, 2))
-  end
-end
-
 defmodule CrdtTextFastTest do
   use ExUnit.Case
   alias P2PDocs.CRDT.CrdtText
   alias P2PDocs.CRDT.OSTree
+  alias P2PDocs.Utils.Math
 
   @peer "peer1"
 
@@ -33,7 +18,7 @@ defmodule CrdtTextFastTest do
       Enum.reduce(1..total, state, fn i, st ->
         # sorted = Enum.sort_by(st.chars, fn x -> {x.pos, x.id} end)
         # pick random adjacent pair
-        idx = :rand.uniform(OSTree.get_size(st.chars) - 1)
+        idx = :rand.uniform(OSTree.get_size(st.chars) + 1)
         {_, new_st} = CrdtText.insert_local(st, idx, Integer.to_string(i))
         new_st
       end)
@@ -48,7 +33,7 @@ defmodule CrdtTextFastTest do
     # IO.inspect(final_state.chars, charlists: :as_lists)
 
     # Expect exactly `total` inserted chars
-    assert OSTree.get_size(final_state.chars) == total + 2
+    assert OSTree.get_size(final_state.chars) == total
     IO.inspect(OSTree.get_size(final_state.chars))
 
     # All IDs unique

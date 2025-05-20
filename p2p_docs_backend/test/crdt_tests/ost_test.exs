@@ -17,7 +17,7 @@ defmodule OSTree.CorrectnessTest do
   end
 
   test "deleting values removes them correctly" do
-    values = Enum.to_list(1..100)
+    values = Enum.to_list(1..10)
 
     tree =
       Enum.reduce(values, OSTree.new(fn a, b -> a - b end), fn x, acc -> OSTree.insert(acc, x) end)

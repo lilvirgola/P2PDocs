@@ -35,6 +35,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Create a new CRDT state for 'peer_id', inserting sentinel bounds.
   """
+  @callback new(peer_id :: binary) :: t
   @spec new(String.t()) :: t()
   def new(peer_id) do
     tree =
@@ -61,6 +62,8 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Locally insert 'value' at index, broadcasting to peers.
   """
+  @callback insert_local(state :: t, index :: non_neg_integer, value :: binary) ::
+              {crdt_char, any}
   @spec insert_local(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
   def insert_local(state, index, value) do
     left = get_at!(state, index - 1)
@@ -111,6 +114,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Locally delete element at 'index', broadcasting to peers.
   """
+  @callback delete_local(state :: t, index :: non_neg_integer) :: {char_id, t}
   @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
   def delete_local(%CRDT{} = state, index) do
     char = get_at!(state, index)
@@ -126,6 +130,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Merge a remote insert operation.
   """
+  @callback apply_remote_insert(state :: t, char :: crdt_char) :: {integer | nil, t}
   @spec apply_remote_insert(t(), crdt_char()) :: {integer() | nil, t()}
   def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
     unless Map.has_key?(state.pos_by_id, id) do
@@ -145,6 +150,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Merge a remote delete operation.
   """
+  @callback apply_remote_delete(state :: t, target_id :: char_id) :: {integer | nil, t}
   @spec apply_remote_delete(t(), char_id()) :: {integer() | nil, t()}
   def apply_remote_delete(%CRDT{} = state, target_id) do
     case Map.fetch(state.pos_by_id, target_id) do
@@ -166,6 +172,7 @@ defmodule P2PDocs.CRDT.CrdtText do
     end
   end
 
+  @callback to_plain_text(t) :: [binary]
   @spec to_plain_text(t()) :: [binary()]
   def to_plain_text(%CRDT{chars: chars}) do
     Enum.map(OSTree.to_list(chars), fn x -> x.value end)

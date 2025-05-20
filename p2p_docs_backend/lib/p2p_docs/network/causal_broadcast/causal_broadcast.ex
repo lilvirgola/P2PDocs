@@ -45,7 +45,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
   Broadcasts a message to all known nodes.
   The message is sent as a cast to the server.
   """
-
+  @callback broadcast(msg :: any) :: :ok
   def broadcast(msg) do
     GenServer.cast(__MODULE__, {:broadcast, msg})
   end

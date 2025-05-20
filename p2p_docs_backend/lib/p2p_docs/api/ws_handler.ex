@@ -7,6 +7,8 @@ defmodule P2PDocs.API.WebSocket.Handler do
     {:cowboy_websocket, req, state}
   end
 
+  @callback send_init(plain_text :: [binary]) :: :ok
+  @spec send_init([binary]) :: :ok
   def send_init(plain_text) do
     # Send the initial message to the client
 
@@ -19,6 +21,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
     PubSub.broadcast(msg)
   end
 
+  @callback remote_insert(index :: pos_integer, value :: binary) :: :ok
   def remote_insert(index, value) do
     # Send a message to the client
     msg = %{
@@ -30,6 +33,7 @@ defmodule P2PDocs.API.WebSocket.Handler do
     PubSub.broadcast(msg)
   end
 
+  @callback remote_delete(index :: pos_integer) :: :ok
   def remote_delete(index) do
     # Send a message to the client
     msg = %{

@@ -23,6 +23,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
     - 'threshold': number of changes before auto-save
     - 'file_path': where to persist the plain-text output
   """
+  @callback new(threshold :: pos_integer, file_path :: binary) :: t
   @spec new(pos_integer(), String.t()) :: t()
   def new(threshold, file_path)
       when is_integer(threshold) and threshold > 0 and is_binary(file_path) do
@@ -33,6 +34,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
     }
   end
 
+  @callback apply_op(auto :: t, crdt :: CrdtText.t()) :: t
   @spec apply_op(t(), CrdtText.t()) :: t()
   def apply_op(%__MODULE__{} = auto, crdt) do
     new_count = auto.change_count + 1
@@ -46,6 +48,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
     end
   end
 
+  @callback apply_state_update(auto :: t, crdt :: CrdtText.t()) :: t
   @spec apply_state_update(t(), CrdtText.t()) :: t()
   def apply_state_update(%__MODULE__{} = auto, crdt) do
     trigger_save(auto, crdt)
@@ -62,12 +65,10 @@ defmodule P2PDocs.CRDT.AutoSaver do
     end
   end
 
-  @doc """
-  Export the CRDT as plain text and write to 'file_path'.
-  Assumes 'CrdtText.to_plain_text/1' returns a list of character binaries.
-  """
+  # Export the CRDT as plain text and write to 'file_path'.
+  # Assumes 'CrdtText.to_plain_text/1' returns a list of character binaries.
   @spec save_state(CrdtText.t(), String.t()) :: :ok | {:error, any()}
-  def save_state(crdt_state, file_path) do
+  defp save_state(crdt_state, file_path) do
     crdt_state
     |> CrdtText.to_plain_text()
     |> Enum.join()
