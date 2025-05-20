@@ -7,6 +7,18 @@ defmodule P2PDocs.API.WebSocket.Handler do
     {:cowboy_websocket, req, state}
   end
 
+  def send_init(plain_text) do
+    # Send the initial message to the client
+
+    msg = %{
+      type: "init",
+      content: plain_text |> Enum.join(""),
+      client_id: node()
+    }
+
+    PubSub.broadcast(msg)
+  end
+
   def remote_insert(index, value) do
     # Send a message to the client
     msg = %{
