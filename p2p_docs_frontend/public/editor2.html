@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CRDT Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #editor {
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      overflow: auto;
+      min-height: 100px;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body class="font-sans max-w-3xl mx-auto p-5 bg-white text-gray-800">
+  <div id="connect-form" class="mb-6 p-4 bg-gray-100 rounded-md shadow">
+    <h1 class="text-xl font-semibold mb-4">Connect to P2P Network or start new file</h1>
+    <input type="text" id="peer-address" placeholder="Enter peer address (optional)"
+           class="border border-gray-300 rounded px-3 py-2 mr-2 w-full sm:w-auto mb-2 sm:mb-0" />
+    <button id="connect-btn"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2">Connect</button>
+    <button id="new-file-btn"
+            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">New File</button>
+  </div>
+
+  <div id="loading-screen" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50 hidden">
+    <div class="flex flex-col items-center">
+      <svg class="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+      <span class="text-lg font-medium text-blue-700">Loading...</span>
+    </div>
+  </div>
+
+  <div id="disconnect-form" class="mb-6 p-4 bg-gray-100 rounded-md shadow hidden">
+    <h1 class="text-xl font-semibold mb-4">Disconnect from P2P Network</h1>
+    <button id="disconnect-btn"
+            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mr-2">Disconnect</button>
+    <button id="share-btn"
+            class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Share Token</button>
+
+    <div id="token" class="mt-4 hidden">
+      <h2 class="text-lg font-medium mb-2">Token</h2>
+      <input type="text" id="token-input" readonly
+             class="border border-gray-300 rounded px-3 py-2 w-full" />
+    </div>
+  </div>
+
+  <h1 class="text-2xl font-bold mb-4">Collaborative Editor</h1>
+  <textarea id="editor"
+       class="border border-gray-300 p-4 min-h-[500px] rounded-md shadow focus:outline-none hidden"></textarea>
+
+  <script src="editor2.js"></script>
+</body>
+</html>
