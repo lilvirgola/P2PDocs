@@ -4,6 +4,12 @@ defmodule P2PDocs.API.WebSocket.Handler do
   alias P2PDocs.PubSub
   alias P2PDocs.Network.NeighborHandler
 
+  @moduledoc """
+  This module implements the WebSocket handler for the P2PDocs application.
+  It handles incoming WebSocket connections and messages.
+  It also manages the state of the WebSocket connection and communicates with the CRDT Manager.
+  """
+
   def init(req, state) do
     {:cowboy_websocket, req, state}
   end
@@ -143,17 +149,6 @@ defmodule P2PDocs.API.WebSocket.Handler do
        ) do
     # leave all neighbors
     P2PDocs.Network.NeighborHandler.leave()
-
-    {:reply, {:text, "{\"type\":\"ok\"}"}, state}
-  end
-
-  defp handle_message(
-         %{"client_id" => _client_id, "index" => index, "type" => "delete"},
-         state
-       ) do
-    if index != "marker" do
-      Manager.local_delete(index)
-    end
 
     {:reply, {:text, "{\"type\":\"ok\"}"}, state}
   end

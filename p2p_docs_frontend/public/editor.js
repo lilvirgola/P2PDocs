@@ -19,6 +19,10 @@ class WebSocketClient {
       console.log("WebSocket connected");
       this.reconnectAttempts = 0;
 
+      const loadingScreen = document.getElementById("loading-screen");
+      if (loadingScreen) loadingScreen.style.display = "none";
+      document.getElementById("connect-form").style.display = "block";
+
       // Send queued messages
       const pendingMessages = [...this.messageQueue];
       this.messageQueue = [];
@@ -151,25 +155,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("connect-form").style.display = "none";
   document.getElementById("disconnect-form").style.display = "none";
 
-  wsClient.onMessage(() => {
-    if (loadingScreen.style.display !== "none") {
-      loadingScreen.style.display = "none";
-      document.getElementById("connect-form").style.display = "block";
-    }
-  });
-
-  wsClient.socket &&
-    wsClient.socket.addEventListener("open", () => {
-      loadingScreen.style.display = "none";
-      document.getElementById("connect-form").style.display = "block";
-    });
-
   // Connect button handler
   connectBtn.addEventListener("click", () => {
     const peerAddress = peerAddressInput.value.trim();
     console.log("Connecting to peer:", peerAddress);
     connectToServer(peerAddress);
-    document.getElementById("connect-form").style.display = "none";
+    newFileBtn.style.display = "none";
     document.getElementById("disconnect-form").style.display = "block";
     editor.style.display = "block";
   });
@@ -177,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // New file button handler
   newFileBtn.addEventListener("click", () => {
     connectToServer();
-    document.getElementById("connect-form").style.display = "none";
+    newFileBtn.style.display = "none";
     document.getElementById("disconnect-form").style.display = "block";
     editor.style.display = "block";
   });
@@ -194,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pendingOperations = [];
 
     editor.value = "";
-    document.getElementById("connect-form").style.display = "block";
+    newFileBtn.style.display = "block";
     document.getElementById("disconnect-form").style.display = "none";
     tokenDiv.style.display = "none";
     editor.style.display = "none";

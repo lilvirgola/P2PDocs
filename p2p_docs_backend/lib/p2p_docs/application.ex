@@ -22,7 +22,11 @@ defmodule P2PDocs.Application do
             :default
   @ets_neighbor_handler Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                           :neighbor_handler_state
-
+  @doc """
+  This module is responsible for starting the P2PDocs application.
+  It initializes the necessary components and sets up the supervision tree.
+  It also handles the ETS tables for storing the state of the application.
+  """
   @impl true
   def start(_type, _args) do
     Logger.info("Starting P2PDocs application...")
@@ -40,6 +44,10 @@ defmodule P2PDocs.Application do
     Supervisor.start_link(children(), strategy: :one_for_one, name: P2PDocs.Supervisor)
   end
 
+  @doc """
+  This function stops the P2PDocs application.
+  It stops all the child processes and cleans up any resources used by the application.
+  """
   @impl true
   def stop(_state) do
     Logger.info("Stopping P2PDocs application...")
@@ -56,6 +64,11 @@ defmodule P2PDocs.Application do
     :ok
   end
 
+  # @doc """
+  # This function defines the child processes that will be supervised by the application.
+  # It includes the API server, the neighbor handler, and any other necessary components.
+  # Each child process is defined with its module and any necessary arguments.
+  # """
   defp children do
     node_id = if Mix.env() == :test, do: :test_node, else: node()
 

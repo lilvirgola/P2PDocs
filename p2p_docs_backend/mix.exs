@@ -14,8 +14,7 @@ defmodule P2PDocs.MixProject do
         extras: ["README.md"],
         favicon: "assets/favicon.png",
         logo: "assets/logo.png",
-        authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"],
-        deps: deps()
+        authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"]
       ]
     ]
   end

@@ -17,14 +17,28 @@ defmodule P2PDocs.Network.NeighborHandler do
                 :neighbor_handler_state
 
   # GenServer API
+  @doc """
+  Starts the NeighborHandler GenServer.
+  It initializes the state with the given peer_id
+  """
   def start_link(peer_id) do
     GenServer.start_link(__MODULE__, peer_id, name: __MODULE__)
   end
 
+  @doc """
+  Retrieves the list of neighbors for the current node.
+  It sends a synchronous call to the GenServer and waits for the response.
+  """
   def get_neighbors() do
     GenServer.call(__MODULE__, :get_neighbors)
   end
 
+  @doc """
+  Initializes the GenServer state.
+  It checks if the state is already stored in the ETS table.
+  If it is, it retrieves the state from the table.
+  If not, it creates a new state and stores it in the table.
+  """
   @impl true
   def init(my_id) do
     Logger.debug("Starting NeighborHandler module for node #{inspect(my_id)}")
@@ -58,6 +72,13 @@ defmodule P2PDocs.Network.NeighborHandler do
   end
 
   # Handles a join request from a peer
+  @doc """
+  this function handles cast request to this genserver,
+  the possible messages are:
+  {:join, peer_id, asked} - when a peer wants to join the network
+  {:leave, peer_id} - when a peer wants to leave the network
+  {:leave_all} - when the node is shutting down and wants to leave all neighbors
+  """
   @impl true
   def handle_cast({:join, peer_id, asked}, state) do
     Logger.debug("Node #{inspect(peer_id)} is trying to join the network.")
@@ -87,7 +108,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
-        #update the frontend
+
+        # update the frontend
         P2PDocs.API.WebSocket.Handler.send_init()
         # If the node is already a neighbor, just return the state
         {:noreply, state}
@@ -111,7 +133,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
-        #update the frontend
+
+        # update the frontend
         P2PDocs.API.WebSocket.Handler.send_init()
         new_state = %{state | neighbors: new_neighbors}
         # Store the updated state in ETS
@@ -132,7 +155,7 @@ defmodule P2PDocs.Network.NeighborHandler do
       EchoWave.update_neighbors(new_neighbors)
       Logger.info("Node #{inspect(peer_id)} leaved the network.")
       new_state = %{state | neighbors: new_neighbors}
-      #update the frontend
+      # update the frontend
       P2PDocs.API.WebSocket.Handler.send_init()
       # Store the updated state in ETS
       :ets.insert(@table_name, {state.peer_id, new_state})
@@ -165,7 +188,8 @@ defmodule P2PDocs.Network.NeighborHandler do
     for neighbor <- state.neighbors do
       remove_neighbor(neighbor)
     end
-    #update the frontend
+
+    # update the frontend
     P2PDocs.API.WebSocket.Handler.send_init()
     {:noreply, state}
   end
@@ -176,6 +200,9 @@ defmodule P2PDocs.Network.NeighborHandler do
     {:noreply, state}
   end
 
+  @doc """
+  This function join the current node to an other node asking his state to update his state
+  """
   @callback join(peer_id :: any) :: :ok | {:error, any}
   def join(peer_id) do
     case Node.connect(peer_id) do
@@ -201,6 +228,9 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @doc """
+  This function add a neighbor to the current node, like a join but without asking for the state
+  """
   @callback add_neighbor(peer_id :: any) :: :ok | {:error, any}
   def add_neighbor(peer_id) do
     case Node.connect(peer_id) do
@@ -224,6 +254,9 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @doc """
+  This function remove a neighbor from the current node
+  """
   @callback remove_neighbor(peer_id :: any) :: :ok | {:error, any}
   def remove_neighbor(peer_id) do
     case Node.disconnect(peer_id) do
@@ -249,11 +282,17 @@ defmodule P2PDocs.Network.NeighborHandler do
     end
   end
 
+  @doc """
+  This function leave all neighbors from the current node
+  """
   @callback leave() :: :ok
   def leave() do
     GenServer.cast(__MODULE__, {:leave_all})
   end
 
+  @doc """
+  This function is called when the GenServer is terminated to gracefully leave all neighbors and remove them
+  """
   @impl true
   def terminate(reason, state) do
     Logger.debug(
@@ -287,6 +326,9 @@ defmodule P2PDocs.Network.NeighborHandler do
     :ok
   end
 
+  @doc """
+  This function is called to get the current neighbors of the node
+  """
   @impl true
   def handle_call(:get_neighbors, _from, state) do
     {:reply, state.neighbors, state}
