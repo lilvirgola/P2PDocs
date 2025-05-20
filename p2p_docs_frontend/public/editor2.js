@@ -398,14 +398,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function insertAt(index, char) {
     index = index - 1; // zero-based
     toEdit = editor.value;
-    editor.value = toEdit.splice(0,pos) + char + toEdit.splice(pos);
+    editor.value = toEdit.splice(0,index) + char + toEdit.splice(index);
     //if (isRemoteUpdate) restoreCursorPosition();
   }
 
   function deleteAt(index) {
     
     toEdit = editor.value;
-    editor.value = toEdit.splice(0,pos) + toEdit.splice(pos+1);
+    editor.value = toEdit.splice(0,index) + toEdit.splice(index+1);
     if (isRemoteUpdate) {
       //restoreCursorPosition();
     }
