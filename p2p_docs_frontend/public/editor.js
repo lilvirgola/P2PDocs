@@ -222,6 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handleServerMessage(data) {
+    console.log(data);
     if (data.type === "init") {
       clientId = data.client_id;
       editor.value = data.content || "";
@@ -341,7 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function insertAt(index, char) {
     let cursor = editor.selectionStart;
-    if (cursor >= index) curosor+=1;
+    if (cursor >= index) cursor+=1;
     index = index - 1; // zero-based
     toEdit = editor.value;
     editor.value = toEdit.slice(0,index) + char + toEdit.slice(index);
