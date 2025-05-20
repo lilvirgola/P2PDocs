@@ -59,15 +59,19 @@ defmodule P2PDocs.Application do
   defp children do
     node_id = if Mix.env() == :test, do: :test_node, else: node()
 
-    [
-      # Registry per websocket
-      P2PDocs.PubSub,
-      {@api_server, %{}},
-      {P2PDocs.Network.NeighborHandler, node_id},
-      {@crdt_manager, [peer_id: node_id]},
-      {@causal_broadcast, [my_id: node_id]},
-      {P2PDocs.Network.EchoWave, {node_id, []}},
-      {P2PDocs.Network.ReliableTransport, [node_id: node_id]}
-    ]
+    if Mix.env() == :test do
+      []
+    else
+      [
+        # Registry per websocket
+        P2PDocs.PubSub,
+        {@api_server, %{}},
+        {P2PDocs.Network.NeighborHandler, node_id},
+        {@crdt_manager, [peer_id: node_id]},
+        {@causal_broadcast, [my_id: node_id]},
+        {P2PDocs.Network.EchoWave, {node_id, []}},
+        {P2PDocs.Network.ReliableTransport, [node_id: node_id]}
+      ]
+    end
   end
 end

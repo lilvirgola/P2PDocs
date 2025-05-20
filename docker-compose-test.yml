@@ -1,0 +1,33 @@
+services:
+  p2p_docs_backend:
+    build: ./p2p_docs_backend
+    container_name: ${COMPOSE_PROJECT_NAME}_backend
+    networks:
+      p2p_docs_net:
+        # No extra configuration needed for this network
+      p2p_docs_shared_net:
+        ipv4_address: 172.16.1.${NUMBER}
+    volumes:
+      - ./files:/app/saves
+    environment:
+      ERL_NODE_NAME: "node@172.16.1.${NUMBER}"  # override if needed
+    restart: unless-stopped
+
+  p2p_docs_frontend:
+    build: ./p2p_docs_frontend
+    container_name: ${COMPOSE_PROJECT_NAME}_frontend
+    networks:
+      - p2p_docs_net
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    environment:
+      MY_ENV_ENDPOINT: "${COMPOSE_PROJECT_NAME}_backend:4000"
+    depends_on:
+      - p2p_docs_backend
+    restart: unless-stopped
+
+networks:
+  p2p_docs_net:
+    driver: bridge
+  p2p_docs_shared_net:
+    external: true

@@ -59,6 +59,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     GenServer.call(__MODULE__, :get_state)
   end
 
+  @callback deliver_to_causal(server :: any, msg :: any) :: {:ok}
   def deliver_to_causal(server \\ __MODULE__, msg) do
     GenServer.cast(server, msg)
   end

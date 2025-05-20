@@ -13,8 +13,9 @@ config :p2p_docs, :causal_broadcast,
 
 # NeighborHandler configuration
 config :p2p_docs, :neighbor_handler,
-  cookie: :default,
-  ets_table: :neighbor_handler_state
+  module: P2PDocs.Network.NeighborHandler,
+  ets_table: :neighbor_handler_state,
+  cookie: :default
 
 # CRDT Manager configuration
 config :p2p_docs, :crdt_manager,

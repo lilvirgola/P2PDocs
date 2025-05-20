@@ -3,7 +3,26 @@ defmodule EchoWaveTest do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.Utils
 
+  import Mox
+
+  # Hide Logger messages
   @moduletag :capture_log
+
+  # Set testing parameters
+  @size 2 ** 12
+  @gamma 1.2
+
+  setup [:set_mox_from_context, :verify_on_exit!, :setup_mocks]
+
+  defp setup_mocks(context) do
+    stub(P2PDocs.Network.ReliableTransportMock, :send, fn _from, to, _module, payload ->
+      GenServer.cast(to, payload)
+    end)
+
+    stub(P2PDocs.Network.CausalBroadcastMock, :deliver_to_causal, fn _, _ -> :ok end)
+
+    {:ok, context}
+  end
 
   test "echo wave static topology" do
     topology = %{
@@ -21,11 +40,9 @@ defmodule EchoWaveTest do
   end
 
   test "echo wave random connected graph" do
-    size = 2 ** 4
-    gamma = 1.2
-    {time, topology} = :timer.tc(fn -> build_random_topology(size, gamma) end)
+    {time, topology} = :timer.tc(fn -> build_random_topology(@size, @gamma) end)
 
-    IO.puts("Random graph creation with #{size} nodes: #{time} microseconds")
+    IO.puts("Random graph creation with #{@size} nodes: #{time} microseconds")
 
     Utils.Graphviz.save_dot_file(topology, "random_topology.dot")
 
@@ -41,10 +58,10 @@ defmodule EchoWaveTest do
       EchoWave.start_link({id, neighbors}, id)
     end
 
-    GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, nil})
+    GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, 0, nil})
 
     {time, value} =
-      :timer.tc(fn -> assert_receive {:tree_complete, ^root, ^size, _}, 10 * size end)
+      :timer.tc(fn -> assert_receive {:wave_complete, ^root, _, ^size}, 10 * size end)
 
     IO.puts("Echo Wave on #{size} nodes: #{time} microseconds")
     value
