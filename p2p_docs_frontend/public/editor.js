@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (let i = 0; i < inserted.length; i++) {
      let operation = ({
         type:     'insert',
-        char:     inserted[i] === '\n' ? '\n' : inserted[i],
+        char:     inserted[i],
         index: insertPos + i + 1,
         client_id: clientId
       });
@@ -323,57 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
   );
 
-
-  /*
-  // Handle local edits
-  editor.addEventListener("input", (e) => {
-    if (isRemoteUpdate || !clientId) {
-      if (!clientId) {
-        // Store operation locally until we get client ID
-        const operation = createOperationFromEvent(e);
-        if (operation) localPendingOperations.push(operation);
-      }
-      return;
-    }
-
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-
-    let inserted = e.data;
-    if(!inserted && e.inputType === "insertLineBreak" ){
-      inserted = "\\n";
-    }
-
-    if (e.inputType.startsWith("insert") && inserted) {
-      const index = e.target.selectionStart;
-      const operation = {
-        type: "insert",
-        index: index,
-        char: inserted,
-        client_id: clientId,
-      };
-
-      if (wsClient.send(operation)) {
-        pendingOperations.push(operation);
-      }
-    } else if (e.inputType === "deleteContentBackward") {
-      const index = e.target.selectionStart + 1; // 1-based
-      if (index >= 1) {
-        // Minimum index is 1
-        const operation = {
-          type: "delete",
-          index: index,
-          client_id: clientId,
-        };
-
-        if (wsClient.send(operation)) {
-          pendingOperations.push(operation);
-        }
-      }
-    }
-  });
-  */
-
   function applyOperations(op) {
     isRemoteUpdate = true;
     console.log("[Editor] Applying operation:", op);
@@ -404,29 +353,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isRemoteUpdate) {
       //restoreCursorPosition();
     }
-  }
-
-  function createOperationFromEvent(e) {
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-
-    if (e.inputType === "insertText") {
-      index = e.target.selectionStart;
-      return {
-        type: "insert",
-        index: index,
-        char: e.data,
-      };
-    } else if (e.inputType === "deleteContentBackward") {
-      const index = e.target.selectionStart + 1;
-      if (index >= 1) {
-        return {
-          type: "delete",
-          index: index,
-        };
-      }
-    }
-    return null;
   }
 
   function restoreCursorPosition() {
