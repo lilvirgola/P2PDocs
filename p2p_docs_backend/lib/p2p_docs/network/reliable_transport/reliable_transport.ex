@@ -4,6 +4,12 @@ defmodule P2PDocs.Network.ReliableTransport do
 
   Messages are sent via GenServer casts and retried every @retry_interval milliseconds
   until an acknowledgement (ACK) is received. Duplicate deliveries are filtered.
+
+  State of the ReliableTransport server.
+
+  - `node_id`: Identifier of this node.
+  - `pending_ack`: Map of `msg_id` to metadata (`from`, `to`, `module`, `payload`, `timer_ref`) for messages awaiting ACK.
+  - `past_msg`: Set of `msg_id` values already delivered, to suppress duplicates.
   """
 
   use GenServer
@@ -11,13 +17,6 @@ defmodule P2PDocs.Network.ReliableTransport do
 
   @retry_interval 5_000
 
-  @typedoc """
-  State of the ReliableTransport server.
-
-  - `node_id`: Identifier of this node.
-  - `pending_ack`: Map of `msg_id` to metadata (`from`, `to`, `module`, `payload`, `timer_ref`) for messages awaiting ACK.
-  - `past_msg`: Set of `msg_id` values already delivered, to suppress duplicates.
-  """
   defstruct node_id: nil,
             pending_ack: %{},
             past_msg: MapSet.new()
@@ -70,14 +69,12 @@ defmodule P2PDocs.Network.ReliableTransport do
   ## Delivery and Retry Callbacks
 
   @impl true
-  @doc """
-  Handles the initial send request:
-
-  - Generates a unique `msg_id`.
-  - Casts a `:deliver` message to the target transport.
-  - Schedules a retry via `Process.send_after/3`.
-  - Stores metadata in `pending_ack`.
-  """
+  # Handles the initial send request:
+  #
+  # - Generates a unique `msg_id`.
+  # - Casts a `:deliver` message to the target transport.
+  # - Schedules a retry via `Process.send_after/3`.
+  # - Stores metadata in `pending_ack`.
   def handle_cast({:send, from, to, module, payload}, state) do
     msg_id = {state.node_id, :erlang.unique_integer([:monotonic, :positive])}
 
@@ -102,12 +99,10 @@ defmodule P2PDocs.Network.ReliableTransport do
   end
 
   @impl true
-  @doc """
-  Handles incoming deliveries:
-
-  - If `msg_id` not seen before, forwards payload to the target module and sends ACK back.
-  - If duplicate, immediately sends ACK without re-delivering the payload.
-  """
+  # Handles incoming deliveries:
+  #
+  # - If `msg_id` not seen before, forwards payload to the target module and sends ACK back.
+  # - If duplicate, immediately sends ACK without re-delivering the payload.
   def handle_cast({:deliver, from, module, payload, msg_id}, state) do
     if MapSet.member?(state.past_msg, msg_id) do
       GenServer.cast({__MODULE__, from}, {:ack, msg_id})
@@ -126,12 +121,10 @@ defmodule P2PDocs.Network.ReliableTransport do
   end
 
   @impl true
-  @doc """
-  Handles ACKs:
-
-  - Cancels the retry timer for the acknowledged `msg_id`.
-  - Removes it from `pending_ack`.
-  """
+  # Handles ACKs:
+  #
+  # - Cancels the retry timer for the acknowledged `msg_id`.
+  # - Removes it from `pending_ack`.
   def handle_cast({:ack, msg_id}, state) do
     case Map.pop(state.pending_ack, msg_id) do
       {nil, _} ->
@@ -145,21 +138,18 @@ defmodule P2PDocs.Network.ReliableTransport do
   end
 
   @impl true
-  @doc """
-  Catches unrecognized cast messages and logs an error.
-  """
+
+  # Catches unrecognized cast messages and logs an error.
   def handle_cast(_, state) do
     Logger.error("Message not valid!")
     {:noreply, state}
   end
 
   @impl true
-  @doc """
-  Handles retry timeouts:
-
-  - If `msg_id` still pending, logs a warning and retransmits.
-  - Reschedules the next timeout.
-  """
+  # Handles retry timeouts:
+  #
+  # - If `msg_id` still pending, logs a warning and retransmits.
+  # - Reschedules the next timeout.
   def handle_info({:timeout, msg_id}, state) do
     case Map.get(state.pending_ack, msg_id) do
       nil ->
@@ -176,11 +166,9 @@ defmodule P2PDocs.Network.ReliableTransport do
   end
 
   @impl true
-  @doc """
-  Called when the GenServer is terminating.
-
-  Logs the termination reason; placeholder for cleanup.
-  """
+  # Called when the GenServer is terminating.
+  #
+  # Logs the termination reason; placeholder for cleanup.
   def terminate(reason, state) do
     Logger.debug("Terminating #{__MODULE__} for node #{inspect(state)} due to #{inspect(reason)}")
     :ok
