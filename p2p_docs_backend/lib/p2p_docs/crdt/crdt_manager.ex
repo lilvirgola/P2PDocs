@@ -103,6 +103,9 @@ defmodule P2PDocs.CRDT.Manager do
 
     new_saver = AutoSaver.apply_state_update(state.auto_saver, new_crdt_with_id)
 
+    P2PDocs.API.WebSocket.Handler.send_init(CrdtText.to_plain_text(new_crdt_with_id))
+
+
     new_state = %__MODULE__{
       state
       | crdt: new_crdt_with_id,

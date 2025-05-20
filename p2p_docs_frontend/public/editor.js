@@ -340,31 +340,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function insertAt(index, char) {
+    let cursor = editor.selectionStart;
+    if (cursor >= index) curosor+=1;
     index = index - 1; // zero-based
     toEdit = editor.value;
     editor.value = toEdit.slice(0,index) + char + toEdit.slice(index);
-    //if (isRemoteUpdate) restoreCursorPosition();
+    if (isRemoteUpdate) editor.setSelectionRange(cursor, cursor);
   }
 
   function deleteAt(index) {
+    let cursor = editor.selectionStart;
+    if (cursor >= index) cursor = max(0, cursor - 1);
     index = index - 1;
     toEdit = editor.value;
     editor.value = toEdit.slice(0,index) + toEdit.slice(index+1);
     if (isRemoteUpdate) {
-      //restoreCursorPosition();
+      editor.setSelectionRange(cursor, cursor);
     }
-  }
-
-  function restoreCursorPosition() {
-    // This is a simplified version - you might want to implement
-    // a more sophisticated cursor position tracking system
-    const range = document.createRange();
-    range.selectNodeContents(editor);
-    range.collapse(false); // Move to end
-
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
   }
 
   // Cookie utility functions
