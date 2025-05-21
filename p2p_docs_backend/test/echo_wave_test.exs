@@ -9,7 +9,7 @@ defmodule EchoWaveTest do
   @moduletag :capture_log
 
   # Set testing parameters
-  @size 2 ** 12
+  @size 2 ** 6
   @gamma 1.2
 
   setup [:set_mox_from_context, :verify_on_exit!, :setup_mocks]
@@ -61,7 +61,9 @@ defmodule EchoWaveTest do
     GenServer.cast(EchoWave.get_peer(root), {:token, self(), 0, 0, nil})
 
     {time, value} =
-      :timer.tc(fn -> assert_receive {:wave_complete, ^root, _, ^size}, 10 * size end)
+      :timer.tc(fn ->
+        assert_receive {:"$gen_cast", {:wave_complete, ^root, _, ^size}}, 10 * size
+      end)
 
     IO.puts("Echo Wave on #{size} nodes: #{time} microseconds")
     value

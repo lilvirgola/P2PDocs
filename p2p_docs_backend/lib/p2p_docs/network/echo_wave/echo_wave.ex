@@ -13,21 +13,13 @@ defmodule P2PDocs.Network.EchoWave do
 
   use GenServer
   require Logger
-  alias P2PDocs.Network.CausalBroadcast
-  alias P2PDocs.Network.ReliableTransport
+  import P2PDocs.Utils.Callbacks
 
   import P2PDocs.Utils.Callbacks
 
   @table_name Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
                 :echo_wave_state
 
-  @typedoc """
-  State of the EchoWave server.
-
-  - `id`: Unique identifier of the node.
-  - `neighbors`: List of neighbor node identifiers.
-  - `pending_waves`: Map tracking ongoing waves by their `wave_id`.
-  """
   defstruct id: nil,
             neighbors: [],
             pending_waves: %{}
@@ -175,9 +167,6 @@ defmodule P2PDocs.Network.EchoWave do
 
   # Replaces neighbors list with the provided `neighbors`.
   @impl true
-  @doc """
-  Replaces neighbors list with the provided `neighbors`.
-  """
   def handle_cast({:update, neighbors}, state) do
     new_state = %{state | neighbors: neighbors}
     :ets.insert(@table_name, {state.id, new_state})
@@ -185,9 +174,7 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   @impl true
-  @doc """
-  Appends the provided `neighbors` to the existing list.
-  """
+  # Appends the provided `neighbors` to the existing list.
   def handle_cast({:add, neighbors}, state) do
     new_state = %{state | neighbors: state.neighbors ++ neighbors}
     :ets.insert(@table_name, {state.id, new_state})
@@ -196,9 +183,6 @@ defmodule P2PDocs.Network.EchoWave do
 
   # Removes the provided `neighbors` from the existing list.
   @impl true
-  @doc """
-  Removes the provided `neighbors` from the existing list.
-  """
   def handle_cast({:del, neighbors}, state) do
     new_state = %{state | neighbors: state.neighbors -- neighbors}
     :ets.insert(@table_name, {state.id, new_state})
