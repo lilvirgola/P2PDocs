@@ -1,14 +1,14 @@
 defmodule P2PDocs.CRDT.Manager do
   @moduledoc """
   Manages the CRDT state for a peer, broadcasts local changes, applies remote operations,
-  and persists state in ETS and via an AutoSaver.
+  and persists state in ETS and via an auto_saver().
   """
   use GenServer
   require Logger
 
-  alias P2PDocs.Network.CausalBroadcast
-  alias P2PDocs.CRDT.{CrdtText, AutoSaver}
-  alias P2PDocs.API.WebSocket.Handler
+  import P2PDocs.Utils.Callbacks
+
+
 
   # ETS table where the manager state is stored
   @table_name Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] || :crdt_manager_state
@@ -92,7 +92,7 @@ defmodule P2PDocs.CRDT.Manager do
   @impl true
   def handle_call(:get_state, _from, state) do
     # Return plain text of CRDT
-    text = CrdtText.to_plain_text(state.crdt)
+    text = crdt_text().to_plain_text(state.crdt)
     {:reply, text, state}
   end
 
@@ -111,9 +111,9 @@ defmodule P2PDocs.CRDT.Manager do
       | peer_id: state.peer_id
     }
 
-    new_saver = AutoSaver.apply_state_update(state.auto_saver, new_crdt_with_id)
+    new_saver = auto_saver().apply_state_update(state.auto_saver, new_crdt_with_id)
 
-    Handler.send_init()
+    handler().send_init()
 
     state = update_state(state, new_crdt_with_id, new_saver)
     {:noreply, state}
@@ -123,11 +123,11 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:local_insert, idx, val}, state) do
     Logger.debug("Local insert at #{idx}")
 
-    {char, new_crdt} = CrdtText.insert_local(state.crdt, idx, val)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {char, new_crdt} = crdt_text().insert_local(state.crdt, idx, val)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
     # Broadcast to other peers
-    CausalBroadcast.broadcast({:remote_insert, char})
+    causal_broadcast().broadcast({:remote_insert, char})
 
     # Persist and update state
     state = update_state(state, new_crdt, new_saver)
@@ -138,10 +138,10 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:local_delete, idx}, state) do
     Logger.debug("Local delete at #{idx}")
 
-    {target_id, new_crdt} = CrdtText.delete_local(state.crdt, idx)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {target_id, new_crdt} = crdt_text().delete_local(state.crdt, idx)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
-    CausalBroadcast.broadcast({:remote_delete, target_id})
+    causal_broadcast().broadcast({:remote_delete, target_id})
     state = update_state(state, new_crdt, new_saver)
     {:noreply, state}
   end
@@ -150,11 +150,11 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:remote_insert, char}, state) do
     Logger.debug("Applying remote insert of #{inspect(char)}")
 
-    {pos, new_crdt} = CrdtText.apply_remote_insert(state.crdt, char)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {pos, new_crdt} = crdt_text().apply_remote_insert(state.crdt, char)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
     # Notify frontend if needed
-    if pos, do: Handler.remote_insert(pos, char.value)
+    if pos, do: handler().remote_insert(pos, char.value)
 
     state = update_state(state, new_crdt, new_saver)
     {:noreply, state}
@@ -164,10 +164,10 @@ defmodule P2PDocs.CRDT.Manager do
   def handle_cast({:remote_delete, target}, state) do
     Logger.debug("Applying remote delete of #{inspect(target)}")
 
-    {pos, new_crdt} = CrdtText.apply_remote_delete(state.crdt, target)
-    new_saver = AutoSaver.apply_op(state.auto_saver, new_crdt)
+    {pos, new_crdt} = crdt_text().apply_remote_delete(state.crdt, target)
+    new_saver = auto_saver().apply_op(state.auto_saver, new_crdt)
 
-    if pos, do: Handler.remote_delete(pos)
+    if pos, do: handler().remote_delete(pos)
 
     state = update_state(state, new_crdt, new_saver)
     {:noreply, state}
@@ -203,8 +203,8 @@ defmodule P2PDocs.CRDT.Manager do
   defp build_initial_state(peer_id) do
     %__MODULE__{
       peer_id: peer_id,
-      crdt: CrdtText.new(peer_id),
-      auto_saver: AutoSaver.new(10, "./saves/#{inspect(peer_id)}.txt")
+      crdt: crdt_text().new(peer_id),
+      auto_saver: auto_saver().new(10, "./saves/#{inspect(peer_id)}.txt")
     }
   end
 
