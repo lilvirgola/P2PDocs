@@ -96,7 +96,7 @@ defmodule P2PDocs.CRDT.Manager do
 
   @impl true
   def handle_call(:get_crdt, _from, state) do
-    Logger.debug("Sending raw CRDT for #{state.peer_id}")
+    Logger.debug("Sending raw CRDT for #{inspect(state.peer_id)}")
     {:reply, state.crdt, state}
   end
 
@@ -185,7 +185,7 @@ defmodule P2PDocs.CRDT.Manager do
     %__MODULE__{
       peer_id: peer_id,
       crdt: CrdtText.new(peer_id),
-      auto_saver: AutoSaver.new(10, "./saves/#{peer_id}.txt")
+      auto_saver: AutoSaver.new(10, "./saves/#{inspect(peer_id)}.txt")
     }
   end
 

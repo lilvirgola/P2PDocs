@@ -14,6 +14,11 @@ defmodule P2PDocs.CRDT.AutoSaver do
           # destination file path
           file_path: String.t()
         }
+  
+  defstruct change_threshold: 1,
+            change_count: 0,
+            file_path: nil
+
 
   @doc """
   Create a new AutoSaver.

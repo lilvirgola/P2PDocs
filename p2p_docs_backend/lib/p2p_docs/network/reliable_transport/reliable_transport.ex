@@ -17,6 +17,28 @@ defmodule P2PDocs.Network.ReliableTransport do
 
   @retry_interval 5_000
 
+  @type node_id            :: String.t()
+  @type module_name        :: module()
+  @type payload            :: any()
+  @type msg_id             :: {node_id(), pos_integer()}
+  @type timer_ref          :: reference()
+
+  @type pending_ack_entry  :: %{
+                              from: node_id(),
+                              to: node_id(),
+                              module: module_name(),
+                              payload: payload(),
+                              timer_ref: timer_ref()
+                            }
+  @type pending_ack        :: %{msg_id() => pending_ack_entry()}
+  @type past_msg           :: MapSet.t(msg_id())
+
+  @type t                  :: %__MODULE__{
+                              node_id: node_id(),
+                              pending_ack: pending_ack(),
+                              past_msg: past_msg()
+                            }
+
   defstruct node_id: nil,
             pending_ack: %{},
             past_msg: MapSet.new()
@@ -28,6 +50,7 @@ defmodule P2PDocs.Network.ReliableTransport do
   retrying every #{@retry_interval}ms until an ACK is received.
   """
   @callback send(from :: any, to :: any, module :: any, payload :: any) :: :ok
+  @spec send(from :: node_id(), to :: node_id(), module :: module_name(), payload :: payload()) :: :ok
   def send(from, to, module, payload) do
     GenServer.cast(__MODULE__, {:send, from, to, module, payload})
   end
