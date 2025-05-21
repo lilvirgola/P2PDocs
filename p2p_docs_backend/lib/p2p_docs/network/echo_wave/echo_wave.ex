@@ -10,6 +10,9 @@ defmodule P2PDocs.Network.EchoWave do
   alias P2PDocs.Network.CausalBroadcast
   alias P2PDocs.Network.ReliableTransport
 
+  @table_name Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
+                          :echo_wave_state
+
   @typedoc """
   State of the EchoWave server.
 
@@ -53,7 +56,6 @@ defmodule P2PDocs.Network.EchoWave do
 
   @doc """
   Initiates an Echo-Wave with given `wave_id` and message `msg`.
-
   Sends a token to self to kick off propagation to neighbors.
   """
   def start_echo_wave(wave_id, msg) do
@@ -100,9 +102,31 @@ defmodule P2PDocs.Network.EchoWave do
   def init({id, neighbors}) do
     Logger.debug("Starting EchoWave module for node #{inspect(id)}")
     Process.flag(:trap_exit, true)
+    try do
+      case :ets.lookup(@table_name, id) do
+        [{_key, state}] ->
+          # State found in ETS, return it
+          Logger.debug("State found in ETS: #{inspect(state)}")
+          # restore the state from ETS
+          {:ok, state}
 
-    state = %__MODULE__{id: id, neighbors: neighbors}
-    {:ok, state}
+        [] ->
+          Logger.debug("No state found in ETS, creating new state")
+          # No state found in ETS, create new state
+          initial_state = %__MODULE__{
+            id: id,
+            neighbors: neighbors
+          }
+
+          # Store the initial state in the ETS table
+          :ets.insert(@table_name, {id, initial_state})
+          {:ok, initial_state}
+      end
+    catch
+      :error, :badarg ->
+        Logger.error("ETS table not found")
+        {:stop, :badarg}
+    end
   end
 
   @impl true
@@ -140,7 +164,7 @@ defmodule P2PDocs.Network.EchoWave do
       else
         new_state
       end
-
+    :ets.insert(@table_name, {state.id, new_state})
     {:noreply, new_state}
   end
 
@@ -148,22 +172,30 @@ defmodule P2PDocs.Network.EchoWave do
   @doc """
   Replaces neighbors list with the provided `neighbors`.
   """
-  def handle_cast({:update, neighbors}, state), do: {:noreply, %{state | neighbors: neighbors}}
-
+  def handle_cast({:update, neighbors}, state) do
+    new_state=%{state | neighbors: neighbors}
+    :ets.insert(@table_name, {state.id, new_state})
+    {:noreply, new_state}
+  end
   @impl true
   @doc """
   Appends the provided `neighbors` to the existing list.
   """
-  def handle_cast({:add, neighbors}, state),
-    do: {:noreply, %{state | neighbors: state.neighbors ++ neighbors}}
+  def handle_cast({:add, neighbors}, state) do
+    new_state = %{state | neighbors: state.neighbors ++ neighbors}
+    :ets.insert(@table_name, {state.id, new_state})
+    {:noreply, new_state}
+  end
 
   @impl true
   @doc """
   Removes the provided `neighbors` from the existing list.
   """
-  def handle_cast({:del, neighbors}, state),
-    do: {:noreply, %{state | neighbors: state.neighbors -- neighbors}}
-
+  def handle_cast({:del, neighbors}, state) do
+    new_state = %{state | neighbors: state.neighbors -- neighbors}
+    :ets.insert(@table_name, {state.id, new_state})
+    {:noreply, new_state}
+  end
   @impl true
   @doc """
   Logs completion of a wave with its final count.
@@ -196,7 +228,7 @@ defmodule P2PDocs.Network.EchoWave do
 
   @doc false
   defp reliable_transport() do
-    Application.get_env(:p2p_docs, :reliable_transport, ReliableTransport)
+    Application.get_env(:p2p_docs, :reliable_transport, ReliableTransport)[:module]
   end
 
   @doc false
@@ -244,13 +276,17 @@ defmodule P2PDocs.Network.EchoWave do
     Enum.each(children, &send_token(state.id, &1, wave_id, msg))
 
     wave = %Wave{parent: from, remaining: children, count: count + 1}
-    %{state | pending_waves: Map.put(pending, wave_id, wave)}
+    new_state = %{state | pending_waves: Map.put(pending, wave_id, wave)}
+    :ets.insert(@table_name, {state.id, new_state})
+    new_state
   end
 
   @doc false
   defp handle_existing_wave(state, from, wave_id, count, prev, pending) do
     Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
     updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
-    %{state | pending_waves: Map.put(pending, wave_id, updated)}
+    new_state=%{state | pending_waves: Map.put(pending, wave_id, updated)}
+    :ets.insert(@table_name, {state.id, new_state})
+    new_state
   end
 end

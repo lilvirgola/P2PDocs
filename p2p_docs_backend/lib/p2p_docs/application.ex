@@ -8,6 +8,9 @@ defmodule P2PDocs.Application do
 
   use Application
 
+
+  @cookie Application.compile_env(:p2p_docs, :neighbor_handler)[:cookie] ||
+            :default
   @causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:module] ||
                       P2PDocs.Network.CausalBroadcast
   @ets_causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
@@ -18,10 +21,13 @@ defmodule P2PDocs.Application do
                       :crdt_manager_state
   @api_server Application.compile_env(:p2p_docs, :api)[:module] ||
                 P2PDocs.API.Server
-  @cookie Application.compile_env(:p2p_docs, :neighbor_handler)[:cookie] ||
-            :default
   @ets_neighbor_handler Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                           :neighbor_handler_state
+  @ets_echo_wave Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
+                          :echo_wave_state
+  @ets_reliable_transport Application.compile_env(:p2p_docs, :reliable_transport)[:ets_table] ||
+                          :reliable_transport_state
+
   @doc """
   This module is responsible for starting the P2PDocs application.
   It initializes the necessary components and sets up the supervision tree.
@@ -39,6 +45,9 @@ defmodule P2PDocs.Application do
     :ets.new(@ets_causal_broadcast, [:named_table, :public, read_concurrency: true])
     :ets.new(@ets_crdt_manager, [:named_table, :public, read_concurrency: true])
     :ets.new(@ets_neighbor_handler, [:named_table, :public, read_concurrency: true])
+    :ets.new(@ets_echo_wave, [:named_table, :public, read_concurrency: true])
+    :ets.new(@ets_reliable_transport, [:named_table, :public, read_concurrency: true])
+
     # IO.inspect(@neighbor_handler, label: "ACTUAL NEIGHBOR HANDLER MODULE")
 
     Supervisor.start_link(children(), strategy: :one_for_one, name: P2PDocs.Supervisor)

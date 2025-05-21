@@ -11,9 +11,11 @@ defmodule P2PDocs.Network.ReliableTransport do
   - `pending_ack`: Map of `msg_id` to metadata (`from`, `to`, `module`, `payload`, `timer_ref`) for messages awaiting ACK.
   - `past_msg`: Set of `msg_id` values already delivered, to suppress duplicates.
   """
-
   use GenServer
   require Logger
+
+  @table_name Application.compile_env(:p2p_docs, :reliable_transport)[:ets_table] ||
+                         :reliable_transport_state
 
   @retry_interval 5_000
 
@@ -79,14 +81,33 @@ defmodule P2PDocs.Network.ReliableTransport do
   def init(opts) do
     Logger.debug("Starting #{__MODULE__} for node #{inspect(opts[:node_id])}")
     Process.flag(:trap_exit, true)
+    node_id = Keyword.fetch!(opts, :node_id)
+    try do
+      case :ets.lookup(@table_name, node_id) do
+        [{_key, state}] ->
+          # State found in ETS, return it
+          Logger.debug("State found in ETS: #{inspect(state)}")
+          # restore the state from ETS
+          {:ok, state}
 
-    state = %__MODULE__{
-      node_id: Keyword.fetch!(opts, :node_id),
-      pending_ack: %{},
-      past_msg: MapSet.new()
-    }
 
-    {:ok, state}
+        [] ->
+          Logger.debug("No state found in ETS, creating new state")
+          # No state found in ETS, create new state
+          initial_state = %__MODULE__{
+            node_id: Keyword.fetch!(opts, :node_id),
+            pending_ack: %{},
+            past_msg: MapSet.new()
+          }
+          # Store the initial state in the ETS table
+          :ets.insert(@table_name, {node_id, initial_state})
+          {:ok, initial_state}
+      end
+    catch
+      :error, :badarg ->
+        Logger.error("ETS table not found")
+        {:stop, :badarg}
+    end
   end
 
   ## Delivery and Retry Callbacks
@@ -118,7 +139,9 @@ defmodule P2PDocs.Network.ReliableTransport do
         timer_ref: timer_ref
       })
 
-    {:noreply, %{state | pending_ack: pending_ack}}
+    new_state=%{state | pending_ack: pending_ack}
+    :ets.insert(@table_name, {state.node_id, new_state})
+    {:noreply, new_state}
   end
 
   @impl true
@@ -139,7 +162,9 @@ defmodule P2PDocs.Network.ReliableTransport do
       GenServer.cast({__MODULE__, from}, {:ack, msg_id})
 
       new_past = MapSet.put(state.past_msg, msg_id)
-      {:noreply, %{state | past_msg: new_past}}
+      new_state=%{state | past_msg: new_past}
+      :ets.insert(@table_name, {state.node_id, new_state})
+      {:noreply, new_state}
     end
   end
 
@@ -156,7 +181,9 @@ defmodule P2PDocs.Network.ReliableTransport do
       {%{timer_ref: timer_ref}, new_pending} ->
         Logger.debug("ACK received for msg_id=#{inspect(msg_id)}, cancelling retries")
         Process.cancel_timer(timer_ref)
-        {:noreply, %{state | pending_ack: new_pending}}
+        new_state=%{state | pending_ack: new_pending}
+        :ets.insert(@table_name, {state.node_id, new_state})
+        {:noreply, new_state}
     end
   end
 
@@ -184,7 +211,9 @@ defmodule P2PDocs.Network.ReliableTransport do
 
         new_timer = Process.send_after(self(), {:timeout, msg_id}, @retry_interval)
         new_pending = Map.put(state.pending_ack, msg_id, %{info | timer_ref: new_timer})
-        {:noreply, %{state | pending_ack: new_pending}}
+        new_state=%{state | pending_ack: new_pending}
+        :ets.insert(@table_name, {state.node_id, new_state})
+        {:noreply, new_state}
     end
   end
 
