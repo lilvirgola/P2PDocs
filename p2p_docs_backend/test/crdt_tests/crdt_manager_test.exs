@@ -4,6 +4,9 @@ defmodule P2PDocs.CRDT.ManagerTest do
 
   alias P2PDocs.CRDT.Manager
 
+  # Hide Logger messages
+  @moduletag :capture_log
+
   setup :set_mox_global
   setup :verify_on_exit!
 
@@ -144,8 +147,7 @@ defmodule P2PDocs.CRDT.ManagerTest do
       new_saver = :s4
 
       expect(P2PDocs.CRDT.AutoSaverMock, :apply_state_update, fn :olds, ^wrapped -> new_saver end)
-      expect(P2PDocs.CRDT.CrdtTextMock, :to_plain_text, fn ^wrapped -> "payload" end)
-      expect(P2PDocs.API.WebSocket.HandlerMock, :send_init, fn "payload" -> :ok end)
+      expect(P2PDocs.API.WebSocket.HandlerMock, :send_init, fn -> :ok end)
 
       {:ok, _} = Manager.start_link("pu")
       GenServer.cast(Manager, {:upd_crdt, raw_crdt})
