@@ -16,6 +16,8 @@ defmodule P2PDocs.Network.EchoWave do
   alias P2PDocs.Network.CausalBroadcast
   alias P2PDocs.Network.ReliableTransport
 
+  import P2PDocs.Utils.Callbacks
+
   @table_name Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
                 :echo_wave_state
 
@@ -226,16 +228,6 @@ defmodule P2PDocs.Network.EchoWave do
       __MODULE__,
       {:token, from, wave_id, 0, msg}
     )
-  end
-
-  @doc false
-  defp reliable_transport() do
-    Application.get_env(:p2p_docs, :reliable_transport, ReliableTransport)[:module]
-  end
-
-  @doc false
-  defp causal_broadcast() do
-    Application.get_env(:p2p_docs, :causal_broadcast, CausalBroadcast)[:module]
   end
 
   @doc false

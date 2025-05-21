@@ -117,6 +117,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Converts the CRDT to a list of characters (plain text).
   """
+  @callback to_plain_text(t) :: [binary]
   @spec to_plain_text(t()) :: [binary()]
   def to_plain_text(%CRDT{chars: chars}) do
     OSTree.to_list(chars) |> Enum.map(& &1.value)
