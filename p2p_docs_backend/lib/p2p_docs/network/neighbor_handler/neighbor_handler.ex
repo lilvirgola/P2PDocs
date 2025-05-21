@@ -153,7 +153,7 @@ defmodule P2PDocs.Network.NeighborHandler do
     else
       new_neighbors = List.delete(state.neighbors, peer_id)
       EchoWave.update_neighbors(new_neighbors)
-      Logger.info("Node #{inspect(peer_id)} leaved the network.")
+      Logger.info("Node #{inspect(peer_id)} left the network.")
       new_state = %{state | neighbors: new_neighbors}
       # update the frontend
       P2PDocs.API.WebSocket.Handler.send_init()

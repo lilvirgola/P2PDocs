@@ -79,7 +79,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
     # join into one string
     |> Enum.join()
     # write to file
-    |> File.write(path)
+    |> then(&File.write(path, &1))
     |> case do
       :ok ->
         # ensure count reset
