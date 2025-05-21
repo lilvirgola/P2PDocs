@@ -2,11 +2,11 @@ defmodule P2PDocs.CRDT.OSTree.Node do
   @moduledoc """
   Internal node struct for the AVL order-statistics tree.
   Fields:
-    - 'value': the stored value
-    - 'left': left child (another 'OSTree.Node' or 'nil')
-    - 'right': right child (another 'OSTree.Node' or 'nil')
-    - 'height': height of this subtree
-    - 'size': number of nodes in this subtree (including self)
+    - `value`: the stored value
+    - `left`: left child (another `OSTree.Node` or `nil`)
+    - `right`: right child (another `OSTree.Node` or `nil`)
+    - `height`: height of this subtree
+    - `size`: number of nodes in this subtree (including self)
   """
   defstruct value: nil,
             left: nil,
@@ -67,7 +67,7 @@ defmodule P2PDocs.CRDT.OSTree do
   end
 
   @doc """
-  Return the k-th smallest element (1-based). Returns 'nil' if out of bounds.
+  Return the k-th smallest element (1-based). Returns `nil` if out of bounds.
   """
   @spec kth_element(%OSTree{}, integer()) :: any() | nil
   def kth_element(%OSTree{root: root}, k) when is_integer(k) and k > 0 do
@@ -79,7 +79,7 @@ defmodule P2PDocs.CRDT.OSTree do
   end
 
   @doc """
-  Return the position of an element (1-based). Returns 'nil' if not found.
+  Return the position of an element (1-based). Returns `nil` if not found.
   """
   @spec index_by_element(%OSTree{}, any()) :: integer() | nil
   def index_by_element(%OSTree{root: root, comparator: comp}, element) do
@@ -90,11 +90,18 @@ defmodule P2PDocs.CRDT.OSTree do
     nil
   end
 
+   @doc """
+  Return the ordered list of the elements of the tree.
+  """
   @spec to_list(%OSTree{}) :: [any()]
   def to_list(%OSTree{root: root}) do
     inorder(root)
   end
 
+     @doc """
+  Return the grahviz representation of the tree.
+  Useful for debugging and graphic purposes.
+  """
   def to_graphviz(%OSTree{root: root}) do
     graphify(root)
   end

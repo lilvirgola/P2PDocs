@@ -4,21 +4,14 @@ defmodule P2PDocs.CRDT.CrdtText do
   Supports local and remote insertions and deletions.
   """
 
+  use Bitwise
   require Logger
-  import Bitwise
 
-  alias P2PDocs.CRDT.OSTree, as: OSTree
-
+  alias P2PDocs.CRDT.OSTree
   alias __MODULE__, as: CRDT
 
   @initial_base 32
   @boundary 15
-
-  defstruct chars: nil,
-            pos_by_id: %{},
-            strategies: %{},
-            peer_id: nil,
-            counter: 1
 
   @type char_id :: {String.t(), non_neg_integer()}
   @type pos_digit :: {non_neg_integer(), String.t()}
@@ -32,25 +25,100 @@ defmodule P2PDocs.CRDT.CrdtText do
           counter: non_neg_integer()
         }
 
+  defstruct chars: nil,
+            pos_by_id: %{},
+            strategies: %{},
+            peer_id: nil,
+            counter: 1
+
+  # Public API
+
   @doc """
-  Create a new CRDT state for 'peer_id', inserting sentinel bounds.
+  Initializes a new CRDT state for `peer_id`.
   """
-  @callback new(peer_id :: binary) :: t
   @spec new(String.t()) :: t()
   def new(peer_id) do
-    tree =
-      OSTree.new(fn a, b -> compare_pos(a.pos, b.pos) end)
-
-    pos_map = %{}
-
-    %CRDT{
-      chars: tree,
-      pos_by_id: pos_map,
-      strategies: %{},
-      peer_id: peer_id
-    }
+    tree = OSTree.new(fn a, b -> compare_pos(a.pos, b.pos) end)
+    %CRDT{chars: tree, peer_id: peer_id}
   end
 
+  @doc """
+  Inserts `value` at local `index`, returning the char and updated state.
+  """
+  @spec insert_local(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
+  def insert_local(state, index, value) do
+    left = get_at(state, index - 1)
+    right = get_at(state, index)
+    do_insert(state, left, right, value)
+  end
+
+  @doc """
+  Deletes local char at `index`, returning its id and updated state.
+  """
+  @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
+  def delete_local(%CRDT{} = state, index) do
+    char = get_at(state, index)
+    new_tree = OSTree.delete(state.chars, char)
+
+    {char.id,
+     %CRDT{
+       state
+       | chars: new_tree,
+         pos_by_id: Map.delete(state.pos_by_id, char.id)
+     }}
+  end
+
+  @doc """
+  Applies a remote insert operation if not already present.
+  Returns the insertion index (or nil) and updated state.
+  """
+  @spec apply_remote_insert(t(), crdt_char()) :: {integer() | nil, t()}
+  def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
+    if Map.has_key?(state.pos_by_id, id) do
+      {nil, state}
+    else
+      new_tree = OSTree.insert(state.chars, char)
+      index = OSTree.index_by_element(new_tree, char)
+
+      {index,
+       %CRDT{
+         state
+         | chars: new_tree,
+           pos_by_id: Map.put(state.pos_by_id, id, pos)
+       }}
+    end
+  end
+
+  @doc """
+  Applies a remote delete operation if the id exists.
+  Returns the removed index (or nil) and updated state.
+  """
+  @spec apply_remote_delete(t(), char_id()) :: {integer() | nil, t()}
+  def apply_remote_delete(%CRDT{} = state, target_id) do
+    case Map.pop(state.pos_by_id, target_id) do
+      {nil, _} ->
+        {nil, state}
+
+      {pos, new_map} ->
+        # Comparator function uses only the pos parameter, so the others do not matter
+        index = OSTree.index_by_element(state.chars, %{id: nil, pos: pos, value: nil})
+        new_tree = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
+
+        {index, %CRDT{state | chars: new_tree, pos_by_id: new_map}}
+    end
+  end
+
+  @doc """
+  Converts the CRDT to a list of characters (plain text).
+  """
+  @spec to_plain_text(t()) :: [binary()]
+  def to_plain_text(%CRDT{chars: chars}) do
+    OSTree.to_list(chars) |> Enum.map(& &1.value)
+  end
+
+  # Private Helpers
+
+  # Compare two positions lexicographically
   defp compare_pos(a, b) do
     cond do
       a > b -> 1
@@ -59,158 +127,67 @@ defmodule P2PDocs.CRDT.CrdtText do
     end
   end
 
-  @doc """
-  Locally insert 'value' at index, broadcasting to peers.
-  """
-  @callback insert_local(state :: t, index :: non_neg_integer, value :: binary) ::
-              {crdt_char, any}
-  @spec insert_local(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
-  def insert_local(state, index, value) do
-    left = get_at!(state, index - 1)
-    right = get_at!(state, index)
-    do_insert(state, left, right, value)
-  end
-
-  defp get_at!(%CRDT{chars: chars}, idx) do
+  # Safe element retrieval: returns a boundary marker for out-of-bounds
+  defp get_at(%CRDT{chars: chars}, idx) do
     case OSTree.kth_element(chars, idx) do
       nil -> %{id: "marker", pos: [], value: nil}
-      val -> val
+      char -> char
     end
   end
 
-  defp do_insert(%CRDT{} = state, left, right, value) do
+  # Performs insertion logic, allocating a new position
+  defp do_insert(state, left, right, value) do
     {new_pos, strategies} =
-      allocate_position(
-        left.pos,
-        right.pos,
-        state.strategies,
-        state.peer_id
-      )
+      allocate_position(left.pos, right.pos, state.strategies, state.peer_id)
 
     new_id = {state.peer_id, state.counter}
     char = %{id: new_id, pos: new_pos, value: value}
 
-    # Invariant check
-    _ =
-      unless (left.pos < new_pos or Enum.empty?(left.pos)) and
-               (new_pos < right.pos or
-                  Enum.empty?(right.pos)) do
-        Logger.error(
-          "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
-            " and #{inspect(right.pos)} does not satisfy intention preservation"
-        )
-      end
+    # Ensure the new position lies between left and right
+    unless (left.pos < new_pos or left.pos == []) and
+             (new_pos < right.pos or right.pos == []) do
+      Logger.error(
+        "Allocation error: position #{inspect(new_pos)} between #{inspect(left.pos)}" <>
+          " and #{inspect(right.pos)} does not satisfy intention preservation"
+      )
+    end
+
+    tree = OSTree.insert(state.chars, char)
 
     {char,
      %CRDT{
-       chars: OSTree.insert(state.chars, char),
-       pos_by_id: Map.put(state.pos_by_id, new_id, new_pos),
-       strategies: strategies,
-       counter: state.counter + 1,
-       peer_id: state.peer_id
+       state
+       | chars: tree,
+         pos_by_id: Map.put(state.pos_by_id, new_id, new_pos),
+         strategies: strategies,
+         counter: state.counter + 1
      }}
   end
 
-  @doc """
-  Locally delete element at 'index', broadcasting to peers.
-  """
-  @callback delete_local(state :: t, index :: non_neg_integer) :: {char_id, t}
-  @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
-  def delete_local(%CRDT{} = state, index) do
-    char = get_at!(state, index)
-
-    new_chars = OSTree.delete(state.chars, char)
-
-    {
-      char.id,
-      %CRDT{state | chars: new_chars, pos_by_id: Map.delete(state.pos_by_id, char.id)}
-    }
-  end
-
-  @doc """
-  Merge a remote insert operation.
-  """
-  @callback apply_remote_insert(state :: t, char :: crdt_char) :: {integer | nil, t}
-  @spec apply_remote_insert(t(), crdt_char()) :: {integer() | nil, t()}
-  def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
-    unless Map.has_key?(state.pos_by_id, id) do
-      char_state = OSTree.insert(state.chars, char)
-
-      {OSTree.index_by_element(char_state, char),
-       %CRDT{
-         state
-         | chars: char_state,
-           pos_by_id: Map.put(state.pos_by_id, id, pos)
-       }}
-    else
-      {nil, state}
-    end
-  end
-
-  @doc """
-  Merge a remote delete operation.
-  """
-  @callback apply_remote_delete(state :: t, target_id :: char_id) :: {integer | nil, t}
-  @spec apply_remote_delete(t(), char_id()) :: {integer() | nil, t()}
-  def apply_remote_delete(%CRDT{} = state, target_id) do
-    case Map.fetch(state.pos_by_id, target_id) do
-      {:ok, val} ->
-        pos = val
-        # id and value are not used by comparator, so they are not needed for delete
-        prev_position = OSTree.index_by_element(state.chars, %{id: nil, pos: pos, value: nil})
-        new_chars = OSTree.delete(state.chars, %{id: nil, pos: pos, value: nil})
-
-        {prev_position,
-         %CRDT{
-           state
-           | chars: new_chars,
-             pos_by_id: Map.delete(state.pos_by_id, target_id)
-         }}
-
-      :error ->
-        {nil, state}
-    end
-  end
-
-  @callback to_plain_text(t) :: [binary]
-  @spec to_plain_text(t()) :: [binary()]
-  def to_plain_text(%CRDT{chars: chars}) do
-    Enum.map(OSTree.to_list(chars), fn x -> x.value end)
-  end
-
-  # -----------------------------------------------------------------------
-  # LSEQ-inspired allocation
-  # -----------------------------------------------------------------------
-
-  @spec allocate_position(position(), position(), map(), String.t()) :: {position(), map()}
+  # LSEQ-inspired allocation dispatcher
   defp allocate_position(p, q, strategies, peer_id) do
     do_allocate(p, q, [], 1, strategies, peer_id)
   end
 
+  # Recursively allocate position digits
   defp do_allocate(p, q, acc, depth, strategies, peer_id) do
-    {upd_strategies, strat} = get_and_update_strategy(strategies, depth)
-
-    {ph, pid} = p_hd = head(p, 0, peer_id)
-    {qh, qid} = _q_hd = head(q, depth, peer_id)
+    {strategies, strat} = get_and_update_strategy(strategies, depth)
+    {ph, pid} = head(p, 0, peer_id)
+    {qh, qid} = head(q, depth, peer_id)
     interval = qh - ph
 
     cond do
       interval > 1 ->
         step = min(interval - 1, @boundary)
         digit = compute_digit(ph, qh, step, strat, peer_id)
-        {acc ++ [digit], upd_strategies}
+        {acc ++ [digit], strategies}
 
-      interval in [0, 1] ->
-        next_p = tail(p)
+      interval <= 1 ->
+        # Handle edge cases and continue to next depth
+        p_tail = tail(p)
+        q_tail = if interval == 0 and pid >= qid, do: tail(q), else: []
 
-        next_q =
-          if interval == 0 and pid >= qid do
-            tail(q)
-          else
-            []
-          end
-
-        p_hd_new =
+        p_hd =
           if interval == 0 and pid > qid do
             _ =
               Logger.warning(
@@ -219,62 +196,38 @@ defmodule P2PDocs.CRDT.CrdtText do
 
             {ph, qid}
           else
-            p_hd
+            {ph, pid}
           end
 
-        do_allocate(next_p, next_q, acc ++ [p_hd_new], depth + 1, upd_strategies, peer_id)
+        do_allocate(p_tail, q_tail, acc ++ [p_hd], depth + 1, strategies, peer_id)
 
       true ->
-        raise "Illegal boundaries between positions #{inspect(p)} and #{inspect(q)}"
+        raise "Illegal boundaries between #{inspect(p)} and #{inspect(q)}"
     end
   end
 
+  # Retrieve or initialize strategy for depth
   defp get_and_update_strategy(strategies, depth) do
     case Map.fetch(strategies, depth) do
-      {:ok, val} ->
-        {strategies, val}
+      {:ok, strat} ->
+        {strategies, strat}
 
       :error ->
-        new_strat =
-          if :rand.uniform(2) == 1 do
-            :plus
-          else
-            :minus
-          end
-
-        {Map.put(strategies, depth, new_strat), new_strat}
+        strat = if :rand.uniform(2) == 1, do: :plus, else: :minus
+        {Map.put(strategies, depth, strat), strat}
     end
   end
 
-  defp base(0) do
-    0
-  end
+  defp compute_digit(left, _, step, :plus, peer_id), do: {left + :rand.uniform(step), peer_id}
+  defp compute_digit(_, right, step, :minus, peer_id), do: {right - :rand.uniform(step), peer_id}
 
-  defp base(depth) do
-    @initial_base <<< (depth - 1)
-  end
+  defp head([], depth, peer_id), do: {base(depth), peer_id}
+  defp head([h | _], _, _), do: h
 
-  defp compute_digit(left, _, step, :plus, peer_id) do
-    {left + :rand.uniform(step), peer_id}
-  end
+  defp tail([]), do: []
+  defp tail([_ | t]), do: t
 
-  defp compute_digit(_, right, step, :minus, peer_id) do
-    {right - :rand.uniform(step), peer_id}
-  end
-
-  defp head([], depth, peer_id) do
-    {base(depth), peer_id}
-  end
-
-  defp head([h | _], _, _) do
-    h
-  end
-
-  defp tail([]) do
-    []
-  end
-
-  defp tail([_ | t]) do
-    t
-  end
+  # Calculate base for a given depth
+  defp base(0), do: 0
+  defp base(depth), do: @initial_base <<< (depth - 1)
 end

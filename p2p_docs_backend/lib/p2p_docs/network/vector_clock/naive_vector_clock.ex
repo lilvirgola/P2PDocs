@@ -9,7 +9,6 @@ defmodule P2PDocs.Network.NaiveVectorClock do
   A vector clock is represented as a map where the keys are process ID
   and the values are integers representing the event count for that process
   """
-  # map something (in our case a process ID) to a non neg event count
   @type t :: %{required(any()) => non_neg_integer()}
 
   @doc """

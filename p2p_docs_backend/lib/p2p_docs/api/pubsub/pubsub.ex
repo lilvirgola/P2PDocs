@@ -50,6 +50,7 @@ defmodule P2PDocs.PubSub do
     Enum.each(state, fn pid ->
       send(pid, {:send_init})
     end)
+
     {:noreply, state}
   end
 

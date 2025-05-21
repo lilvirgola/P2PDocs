@@ -87,7 +87,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
-        #update the frontend
+
+        # update the frontend
         P2PDocs.API.WebSocket.Handler.send_init()
         # If the node is already a neighbor, just return the state
         {:noreply, state}
@@ -111,7 +112,8 @@ defmodule P2PDocs.Network.NeighborHandler do
             {:upd_vc_and_d, CausalBroadcast.get_vc_and_d_state()}
           )
         end
-        #update the frontend
+
+        # update the frontend
         P2PDocs.API.WebSocket.Handler.send_init()
         new_state = %{state | neighbors: new_neighbors}
         # Store the updated state in ETS
@@ -132,7 +134,7 @@ defmodule P2PDocs.Network.NeighborHandler do
       EchoWave.update_neighbors(new_neighbors)
       Logger.info("Node #{inspect(peer_id)} leaved the network.")
       new_state = %{state | neighbors: new_neighbors}
-      #update the frontend
+      # update the frontend
       P2PDocs.API.WebSocket.Handler.send_init()
       # Store the updated state in ETS
       :ets.insert(@table_name, {state.peer_id, new_state})
@@ -165,7 +167,8 @@ defmodule P2PDocs.Network.NeighborHandler do
     for neighbor <- state.neighbors do
       remove_neighbor(neighbor)
     end
-    #update the frontend
+
+    # update the frontend
     P2PDocs.API.WebSocket.Handler.send_init()
     {:noreply, state}
   end

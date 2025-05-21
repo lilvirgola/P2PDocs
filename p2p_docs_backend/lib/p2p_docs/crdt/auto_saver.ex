@@ -1,29 +1,27 @@
 defmodule P2PDocs.CRDT.AutoSaver do
   @moduledoc """
-  Take a CrdtText state as input and auto-saves it to a file after a configured
-  number of changes, exporting its plain-text representation.
+  Autosave a CrdtText state to file after a set number of changes.
   """
+
   require Logger
   alias P2PDocs.CRDT.CrdtText
 
-  defstruct [
-    :change_threshold,
-    :change_count,
-    :file_path
-  ]
-
   @type t :: %__MODULE__{
+          # max changes before autosave
           change_threshold: pos_integer(),
+          # current change count
           change_count: non_neg_integer(),
+          # destination file path
           file_path: String.t()
         }
 
   @doc """
-  Initialize an AutoSaver with:
-    - 'threshold': number of changes before auto-save
-    - 'file_path': where to persist the plain-text output
+  Create a new AutoSaver.
+
+  ## Parameters
+    - threshold: number of changes before autosave
+    - file_path: path to write plain-text output
   """
-  @callback new(threshold :: pos_integer, file_path :: binary) :: t
   @spec new(pos_integer(), String.t()) :: t()
   def new(threshold, file_path)
       when is_integer(threshold) and threshold > 0 and is_binary(file_path) do
@@ -34,44 +32,58 @@ defmodule P2PDocs.CRDT.AutoSaver do
     }
   end
 
-  @callback apply_op(auto :: t, crdt :: CrdtText.t()) :: t
+  @doc """
+  Apply an edit operation: increments the change count and saves if threshold reached.
+  """
   @spec apply_op(t(), CrdtText.t()) :: t()
   def apply_op(%__MODULE__{} = auto, crdt) do
-    new_count = auto.change_count + 1
+    auto
+    # increment change count
+    |> Map.update!(:change_count, &(&1 + 1))
+    # trigger save if needed
+    |> maybe_save(crdt)
+  end
 
-    auto = %__MODULE__{auto | change_count: new_count}
+  @doc """
+  Force-save current state regardless of change count.
+  """
+  @spec apply_state_update(t(), CrdtText.t()) :: t()
+  def apply_state_update(%__MODULE__{} = auto, crdt) do
+    # always write out and reset count
+    save(auto, crdt)
+  end
 
-    if new_count >= auto.change_threshold do
-      trigger_save(auto, crdt)
+  # Internal: check threshold and save if reached
+  defp maybe_save(%__MODULE__{change_count: count, change_threshold: thresh} = auto, crdt) do
+    if count >= thresh do
+      auto
+      # reset count
+      |> Map.put(:change_count, 0)
+      |> save(crdt)
     else
+      # no save yet
       auto
     end
   end
 
-  @callback apply_state_update(auto :: t, crdt :: CrdtText.t()) :: t
-  @spec apply_state_update(t(), CrdtText.t()) :: t()
-  def apply_state_update(%__MODULE__{} = auto, crdt) do
-    trigger_save(auto, crdt)
-  end
-
-  # Internal: export plain text and write to file, reset counter
-  defp trigger_save(%__MODULE__{} = auto, crdt) do
-    case save_state(crdt, auto.file_path) do
+  # Internal: export CRDT to plain text, write to file, log on error
+  defp save(%__MODULE__{file_path: path} = auto, crdt) do
+    crdt
+    # get list of binaries
+    |> CrdtText.to_plain_text()
+    # join into one string
+    |> Enum.join()
+    # write to file
+    |> File.write(path)
+    |> case do
       :ok ->
+        # ensure count reset
         %__MODULE__{auto | change_count: 0}
 
       {:error, reason} ->
-        Logger.error("Auto-save to #{auto.file_path} failed: #{inspect(reason)}")
+        Logger.error("Failed to save to #{path}: #{inspect(reason)}")
+        # return original state on error
+        auto
     end
-  end
-
-  # Export the CRDT as plain text and write to 'file_path'.
-  # Assumes 'CrdtText.to_plain_text/1' returns a list of character binaries.
-  @spec save_state(CrdtText.t(), String.t()) :: :ok | {:error, any()}
-  defp save_state(crdt_state, file_path) do
-    crdt_state
-    |> CrdtText.to_plain_text()
-    |> Enum.join()
-    |> then(&File.write(file_path, &1))
   end
 end
