@@ -16,6 +16,16 @@ defmodule P2PDocs.Network.EchoWave do
   alias P2PDocs.Network.CausalBroadcast
   alias P2PDocs.Network.ReliableTransport
 
+  @table_name Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
+                          :echo_wave_state
+
+  @typedoc """
+  State of the EchoWave server.
+
+  - `id`: Unique identifier of the node.
+  - `neighbors`: List of neighbor node identifiers.
+  - `pending_waves`: Map tracking ongoing waves by their `wave_id`.
+  """
   defstruct id: nil,
             neighbors: [],
             pending_waves: %{}
@@ -52,7 +62,6 @@ defmodule P2PDocs.Network.EchoWave do
 
   @doc """
   Initiates an Echo-Wave with given `wave_id` and message `msg`.
-
   Sends a token to self to kick off propagation to neighbors.
   """
   def start_echo_wave(wave_id, msg) do
@@ -97,12 +106,33 @@ defmodule P2PDocs.Network.EchoWave do
   def init({id, neighbors}) do
     Logger.debug("Starting EchoWave module for node #{inspect(id)}")
     Process.flag(:trap_exit, true)
+    try do
+      case :ets.lookup(@table_name, id) do
+        [{_key, state}] ->
+          # State found in ETS, return it
+          Logger.debug("State found in ETS: #{inspect(state)}")
+          # restore the state from ETS
+          {:ok, state}
 
-    state = %__MODULE__{id: id, neighbors: neighbors}
-    {:ok, state}
+        [] ->
+          Logger.debug("No state found in ETS, creating new state")
+          # No state found in ETS, create new state
+          initial_state = %__MODULE__{
+            id: id,
+            neighbors: neighbors
+          }
+
+          # Store the initial state in the ETS table
+          :ets.insert(@table_name, {id, initial_state})
+          {:ok, initial_state}
+      end
+    catch
+      :error, :badarg ->
+        Logger.error("ETS table not found")
+        {:stop, :badarg}
+    end
   end
 
-  # Handles the cast to start an echo: logs and enqueues a token internal cast.
   @impl true
   def handle_cast({:start_echo, wave_id, msg}, state) do
     Logger.debug("#{state.id} started Echo-Wave #{inspect(wave_id)}")
@@ -133,25 +163,40 @@ defmodule P2PDocs.Network.EchoWave do
       else
         new_state
       end
-
+    :ets.insert(@table_name, {state.id, new_state})
     {:noreply, new_state}
   end
 
   # Replaces neighbors list with the provided `neighbors`.
   @impl true
-  def handle_cast({:update, neighbors}, state), do: {:noreply, %{state | neighbors: neighbors}}
-
-  # Appends the provided `neighbors` to the existing list.
+  @doc """
+  Replaces neighbors list with the provided `neighbors`.
+  """
+  def handle_cast({:update, neighbors}, state) do
+    new_state=%{state | neighbors: neighbors}
+    :ets.insert(@table_name, {state.id, new_state})
+    {:noreply, new_state}
+  end
   @impl true
-  def handle_cast({:add, neighbors}, state),
-    do: {:noreply, %{state | neighbors: state.neighbors ++ neighbors}}
+  @doc """
+  Appends the provided `neighbors` to the existing list.
+  """
+  def handle_cast({:add, neighbors}, state) do
+    new_state = %{state | neighbors: state.neighbors ++ neighbors}
+    :ets.insert(@table_name, {state.id, new_state})
+    {:noreply, new_state}
+  end
 
   # Removes the provided `neighbors` from the existing list.
   @impl true
-  def handle_cast({:del, neighbors}, state),
-    do: {:noreply, %{state | neighbors: state.neighbors -- neighbors}}
-
-  # Logs completion of a wave with its final count.
+  @doc """
+  Removes the provided `neighbors` from the existing list.
+  """
+  def handle_cast({:del, neighbors}, state) do
+    new_state = %{state | neighbors: state.neighbors -- neighbors}
+    :ets.insert(@table_name, {state.id, new_state})
+    {:noreply, new_state}
+  end
   @impl true
   def handle_cast({:wave_complete, _from, wave_id, count}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended with #{count} nodes")
@@ -179,7 +224,7 @@ defmodule P2PDocs.Network.EchoWave do
 
   @doc false
   defp reliable_transport() do
-    Application.get_env(:p2p_docs, :reliable_transport, ReliableTransport)
+    Application.get_env(:p2p_docs, :reliable_transport, ReliableTransport)[:module]
   end
 
   @doc false
@@ -227,13 +272,17 @@ defmodule P2PDocs.Network.EchoWave do
     Enum.each(children, &send_token(state.id, &1, wave_id, msg))
 
     wave = %Wave{parent: from, remaining: children, count: count + 1}
-    %{state | pending_waves: Map.put(pending, wave_id, wave)}
+    new_state = %{state | pending_waves: Map.put(pending, wave_id, wave)}
+    :ets.insert(@table_name, {state.id, new_state})
+    new_state
   end
 
   @doc false
   defp handle_existing_wave(state, from, wave_id, count, prev, pending) do
     Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
     updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
-    %{state | pending_waves: Map.put(pending, wave_id, updated)}
+    new_state=%{state | pending_waves: Map.put(pending, wave_id, updated)}
+    :ets.insert(@table_name, {state.id, new_state})
+    new_state
   end
 end

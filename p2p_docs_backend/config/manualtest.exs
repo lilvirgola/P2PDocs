@@ -26,3 +26,13 @@ config :p2p_docs, :api,
   module: P2PDocs.API.Server,
   ets_table: :api_server_state,
   port: 4000
+
+# Echo wave configuration
+config :p2p_docs, :echo_wave,
+  module: P2PDocs.Network.EchoWave,
+  ets_table: :echo_wave_state
+
+# Reliable Transport configuration
+config :p2p_docs, :reliable_transport,
+  module: P2PDocs.Network.ReliableTransport,
+  ets_table: :reliable_transport_state
