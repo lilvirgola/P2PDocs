@@ -182,7 +182,7 @@ defmodule P2PDocs.CRDT.CrdtText do
         digit = compute_digit(ph, qh, step, strat, peer_id)
         {acc ++ [digit], strategies}
 
-      interval <= 1 ->
+      interval in [0, 1] ->
         # Handle edge cases and continue to next depth
         p_tail = tail(p)
         q_tail = if interval == 0 and pid >= qid, do: tail(q), else: []
