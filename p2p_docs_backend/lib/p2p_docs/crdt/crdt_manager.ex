@@ -94,6 +94,23 @@ defmodule P2PDocs.CRDT.Manager do
     {:reply, text, state}
   end
 
+    @impl true
+  def handle_cast({:upd_crdt, new_crdt}, state) do
+    Logger.debug("Node #{inspect(state.peer_id)} is updating its crdt state!")
+
+    new_crdt_with_id = %{
+      new_crdt
+      | peer_id: state.peer_id
+    }
+
+    new_saver = AutoSaver.apply_state_update(state.auto_saver, new_crdt_with_id)
+
+    Handler.send_init()
+
+    state = update_state(state, new_crdt, new_saver)
+    {:noreply, state}
+  end
+
   @impl true
   def handle_call(:get_crdt, _from, state) do
     Logger.debug("Sending raw CRDT for #{inspect(state.peer_id)}")
