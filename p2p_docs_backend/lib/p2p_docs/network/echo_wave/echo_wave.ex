@@ -3,6 +3,12 @@ defmodule P2PDocs.Network.EchoWave do
   This module implements the Echo-Wave algorithm for peer-to-peer communication.
   It allows nodes to send messages to their neighbors and receive responses.
   The Echo-Wave algorithm is a simple and efficient way to propagate messages in a network.
+
+  State of the EchoWave server.
+
+  - `id`: Unique identifier of the node.
+  - `neighbors`: List of neighbor node identifiers.
+  - `pending_waves`: Map tracking ongoing waves by their `wave_id`.
   """
 
   use GenServer
@@ -92,13 +98,11 @@ defmodule P2PDocs.Network.EchoWave do
 
   ## GenServer Callbacks
 
+  # Initializes the GenServer state.
+  #
+  # - Sets process to trap exits.
+  # - Logs startup with node `id`.
   @impl true
-  @doc """
-  Initializes the GenServer state.
-
-  - Sets process to trap exits.
-  - Logs startup with node `id`.
-  """
   def init({id, neighbors}) do
     Logger.debug("Starting EchoWave module for node #{inspect(id)}")
     Process.flag(:trap_exit, true)
@@ -130,20 +134,15 @@ defmodule P2PDocs.Network.EchoWave do
   end
 
   @impl true
-  @doc """
-  Handles the cast to start an echo: logs and enqueues a token internal cast.
-  """
   def handle_cast({:start_echo, wave_id, msg}, state) do
     Logger.debug("#{state.id} started Echo-Wave #{inspect(wave_id)}")
     GenServer.cast(__MODULE__, {:token, self(), wave_id, 0, msg})
     {:noreply, state}
   end
 
+  # Main token handler: distinguishes new vs existing waves,
+  # updates state, and triggers report-back when complete.
   @impl true
-  @doc """
-  Main token handler: distinguishes new vs existing waves,
-  updates state, and triggers report-back when complete.
-  """
   def handle_cast({:token, from, wave_id, count, msg}, state) do
     {old, pending} = Map.pop(state.pending_waves, wave_id)
 
@@ -168,6 +167,7 @@ defmodule P2PDocs.Network.EchoWave do
     {:noreply, new_state}
   end
 
+  # Replaces neighbors list with the provided `neighbors`.
   @impl true
   @doc """
   Replaces neighbors list with the provided `neighbors`.
@@ -187,6 +187,7 @@ defmodule P2PDocs.Network.EchoWave do
     {:noreply, new_state}
   end
 
+  # Removes the provided `neighbors` from the existing list.
   @impl true
   @doc """
   Removes the provided `neighbors` from the existing list.
@@ -197,18 +198,13 @@ defmodule P2PDocs.Network.EchoWave do
     {:noreply, new_state}
   end
   @impl true
-  @doc """
-  Logs completion of a wave with its final count.
-  """
   def handle_cast({:wave_complete, _from, wave_id, count}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended with #{count} nodes")
     {:noreply, state}
   end
 
+  # Catches any unrecognized cast messages and logs an error.
   @impl true
-  @doc """
-  Catches any unrecognized cast messages and logs an error.
-  """
   def handle_cast(_, state) do
     Logger.error("Message not valid!")
     {:noreply, state}
@@ -251,7 +247,7 @@ defmodule P2PDocs.Network.EchoWave do
 
   @doc false
   defp send_back(from, parent, wave_id, count) when is_pid(parent) do
-    send(parent, {:wave_complete, from, wave_id, count})
+    GenServer.cast(parent, {:wave_complete, from, wave_id, count})
   end
 
   @doc false

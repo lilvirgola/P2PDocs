@@ -8,6 +8,15 @@ defmodule P2PDocs.CRDT.OSTree.Node do
     - `height`: height of this subtree
     - `size`: number of nodes in this subtree (including self)
   """
+
+  @type t(a) :: %__MODULE__{
+          value: a,
+          left: t(a) | nil,
+          right: t(a) | nil,
+          height: non_neg_integer(),
+          size: non_neg_integer()
+        }
+
   defstruct value: nil,
             left: nil,
             right: nil,
@@ -23,13 +32,19 @@ defmodule P2PDocs.CRDT.OSTree do
   alias __MODULE__, as: OSTree
   alias OSTree.Node
 
-  @type comparator :: (any(), any() -> integer())
+  @type comparator(a) :: (a, a -> integer())
+  @type t(a) :: %OSTree{
+          comparator: comparator(a),
+          root: Node.t(a) | nil
+        }
+
+
   defstruct comparator: nil, root: nil
 
   @doc """
   Create a new, empty order-statistics tree with the given comparator.
   """
-  @spec new(comparator()) :: %OSTree{}
+  @spec new(comparator(a)) :: t(a) when a: var
   def new(comp) when is_function(comp, 2) do
     %OSTree{comparator: comp, root: nil}
   end
@@ -37,7 +52,7 @@ defmodule P2PDocs.CRDT.OSTree do
   @doc """
   Get size of the tree.
   """
-  @spec get_size(%OSTree{}) :: non_neg_integer()
+  @spec get_size(t(any())) :: non_neg_integer()
   def get_size(%OSTree{} = state) do
     size(state.root)
   end
@@ -45,7 +60,7 @@ defmodule P2PDocs.CRDT.OSTree do
   @doc """
   Get height of the tree.
   """
-  @spec get_height(%OSTree{}) :: non_neg_integer()
+  @spec get_height(t(any())) :: non_neg_integer()
   def get_height(%OSTree{} = state) do
     height(state.root)
   end
@@ -53,7 +68,7 @@ defmodule P2PDocs.CRDT.OSTree do
   @doc """
   Insert a value into the tree. Duplicates are ignored.
   """
-  @spec insert(%OSTree{}, any()) :: %OSTree{}
+  @spec insert(t(a), a) :: t(a) when a: var
   def insert(%OSTree{comparator: comp, root: root} = tree, value) do
     %{tree | root: comp_insert(comp, root, value)}
   end
@@ -61,7 +76,7 @@ defmodule P2PDocs.CRDT.OSTree do
   @doc """
   Delete a value from the tree. If absent, no change.
   """
-  @spec delete(%OSTree{}, any()) :: %OSTree{}
+  @spec delete(t(a), a) :: t(a) when a: var
   def delete(%OSTree{comparator: comp, root: root} = tree, value) do
     %{tree | root: comp_delete(comp, root, value)}
   end
@@ -69,7 +84,7 @@ defmodule P2PDocs.CRDT.OSTree do
   @doc """
   Return the k-th smallest element (1-based). Returns `nil` if out of bounds.
   """
-  @spec kth_element(%OSTree{}, integer()) :: any() | nil
+  @spec kth_element(t(a), pos_integer()) :: a | nil when a: var
   def kth_element(%OSTree{root: root}, k) when is_integer(k) and k > 0 do
     select(root, k)
   end
@@ -81,7 +96,7 @@ defmodule P2PDocs.CRDT.OSTree do
   @doc """
   Return the position of an element (1-based). Returns `nil` if not found.
   """
-  @spec index_by_element(%OSTree{}, any()) :: integer() | nil
+  @spec index_by_element(t(a), a) :: pos_integer() | nil when a: var
   def index_by_element(%OSTree{root: root, comparator: comp}, element) do
     find_by_element(comp, root, element)
   end
@@ -93,7 +108,7 @@ defmodule P2PDocs.CRDT.OSTree do
    @doc """
   Return the ordered list of the elements of the tree.
   """
-  @spec to_list(%OSTree{}) :: [any()]
+  @spec to_list(t(a)) :: [a] when a: var
   def to_list(%OSTree{root: root}) do
     inorder(root)
   end
