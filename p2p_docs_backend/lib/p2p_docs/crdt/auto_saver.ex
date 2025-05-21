@@ -53,6 +53,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
   @doc """
   Force-save current state regardless of change count.
   """
+  @callback apply_state_update(auto :: t, crdt :: CrdtText.t()) :: t
   @spec apply_state_update(t(), CrdtText.t()) :: t()
   def apply_state_update(%__MODULE__{} = auto, crdt) do
     # always write out and reset count
