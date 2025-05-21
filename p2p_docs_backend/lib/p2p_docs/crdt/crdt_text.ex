@@ -36,6 +36,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Initializes a new CRDT state for `peer_id`.
   """
+  @callback new(peer_id :: binary) :: t
   @spec new(String.t()) :: t()
   def new(peer_id) do
     tree = OSTree.new(fn a, b -> compare_pos(a.pos, b.pos) end)
@@ -45,6 +46,8 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Inserts `value` at local `index`, returning the char and updated state.
   """
+  @callback insert_local(state :: t, index :: non_neg_integer, value :: binary) ::
+              {crdt_char, any}
   @spec insert_local(t(), non_neg_integer(), binary()) :: {crdt_char(), t()}
   def insert_local(state, index, value) do
     left = get_at(state, index - 1)
@@ -55,6 +58,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @doc """
   Deletes local char at `index`, returning its id and updated state.
   """
+  @callback delete_local(state :: t, index :: non_neg_integer) :: {char_id, t}
   @spec delete_local(t(), non_neg_integer()) :: {char_id(), t()}
   def delete_local(%CRDT{} = state, index) do
     char = get_at(state, index)
@@ -72,6 +76,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Applies a remote insert operation if not already present.
   Returns the insertion index (or nil) and updated state.
   """
+  @callback apply_remote_insert(state :: t, char :: crdt_char) :: {integer | nil, t}
   @spec apply_remote_insert(t(), crdt_char()) :: {integer() | nil, t()}
   def apply_remote_insert(%CRDT{} = state, %{id: id, pos: pos} = char) do
     if Map.has_key?(state.pos_by_id, id) do
@@ -93,6 +98,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   Applies a remote delete operation if the id exists.
   Returns the removed index (or nil) and updated state.
   """
+  @callback apply_remote_delete(state :: t, target_id :: char_id) :: {integer | nil, t}
   @spec apply_remote_delete(t(), char_id()) :: {integer() | nil, t()}
   def apply_remote_delete(%CRDT{} = state, target_id) do
     case Map.pop(state.pos_by_id, target_id) do

@@ -8,7 +8,6 @@ defmodule P2PDocs.Application do
 
   use Application
 
-
   @cookie Application.compile_env(:p2p_docs, :neighbor_handler)[:cookie] ||
             :default
   @causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:module] ||
@@ -24,9 +23,9 @@ defmodule P2PDocs.Application do
   @ets_neighbor_handler Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                           :neighbor_handler_state
   @ets_echo_wave Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
-                          :echo_wave_state
+                   :echo_wave_state
   @ets_reliable_transport Application.compile_env(:p2p_docs, :reliable_transport)[:ets_table] ||
-                          :reliable_transport_state
+                            :reliable_transport_state
 
   @doc """
   This module is responsible for starting the P2PDocs application.

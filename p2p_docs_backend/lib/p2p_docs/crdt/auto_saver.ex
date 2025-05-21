@@ -14,11 +14,10 @@ defmodule P2PDocs.CRDT.AutoSaver do
           # destination file path
           file_path: String.t()
         }
-  
+
   defstruct change_threshold: 1,
             change_count: 0,
             file_path: nil
-
 
   @doc """
   Create a new AutoSaver.
@@ -27,6 +26,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
     - threshold: number of changes before autosave
     - file_path: path to write plain-text output
   """
+  @callback new(threshold :: pos_integer, file_path :: binary) :: t
   @spec new(pos_integer(), String.t()) :: t()
   def new(threshold, file_path)
       when is_integer(threshold) and threshold > 0 and is_binary(file_path) do
@@ -40,6 +40,7 @@ defmodule P2PDocs.CRDT.AutoSaver do
   @doc """
   Apply an edit operation: increments the change count and saves if threshold reached.
   """
+  @callback apply_op(auto :: t, crdt :: CrdtText.t()) :: t
   @spec apply_op(t(), CrdtText.t()) :: t()
   def apply_op(%__MODULE__{} = auto, crdt) do
     auto
