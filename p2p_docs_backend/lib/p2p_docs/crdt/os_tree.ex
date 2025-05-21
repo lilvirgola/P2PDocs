@@ -1,30 +1,3 @@
-defmodule P2PDocs.CRDT.OSTree.Node do
-  @moduledoc """
-  Internal node struct for the AVL order-statistics tree.
-
-  Fields:
-    - `value`: the stored value
-    - `left`: left child (another `OSTree.Node` or `nil`)
-    - `right`: right child (another `OSTree.Node` or `nil`)
-    - `height`: height of this subtree
-    - `size`: number of nodes in this subtree (including self)
-  """
-
-  @type t(a) :: %__MODULE__{
-          value: a,
-          left: t(a) | nil,
-          right: t(a) | nil,
-          height: non_neg_integer(),
-          size: non_neg_integer()
-        }
-
-  defstruct value: nil,
-            left: nil,
-            right: nil,
-            height: 1,
-            size: 1
-end
-
 defmodule P2PDocs.CRDT.OSTree do
   @moduledoc """
   An AVL order-statistics tree with custom comparator, supporting
@@ -40,6 +13,33 @@ defmodule P2PDocs.CRDT.OSTree do
         }
 
   defstruct comparator: nil, root: nil
+
+  defmodule Node do
+    @moduledoc """
+    Internal node struct for the AVL order-statistics tree.
+
+    Fields:
+      - `value`: the stored value
+      - `left`: left child (another `OSTree.Node` or `nil`)
+      - `right`: right child (another `OSTree.Node` or `nil`)
+      - `height`: height of this subtree
+      - `size`: number of nodes in this subtree (including self)
+    """
+
+    @type t(a) :: %__MODULE__{
+            value: a,
+            left: t(a) | nil,
+            right: t(a) | nil,
+            height: non_neg_integer(),
+            size: non_neg_integer()
+          }
+
+    defstruct value: nil,
+              left: nil,
+              right: nil,
+              height: 1,
+              size: 1
+  end
 
   @doc """
   Create a new, empty order-statistics tree with the given comparator.

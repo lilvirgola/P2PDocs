@@ -11,22 +11,7 @@ defmodule P2PDocs.MixProject do
 
       # Docs
       name: "P2PDocs",
-      docs: [
-        main: "get_started",
-        extras: ["get_started.md"],
-        nest_modules_by_prefix: [
-          "P2PDocs",
-          "P2PDocs.CRDT",
-          "P2PDocs.Network",
-          "P2PDocs.API",
-          "P2PDocs.Utils"
-        ],
-        favicon: "assets/favicon.png",
-        logo: "assets/logo.png",
-        authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"],
-        source_url_pattern:
-          "https://github.com/lilvirgola/ProgettoSistemiDistribuiti/blob/main/p2p_docs_backend/%{path}#L%{line}"
-      ]
+      docs: docs()
     ]
   end
 
@@ -41,17 +26,38 @@ defmodule P2PDocs.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # for API server
+      # For the API server
       {:cowboy, "~> 2.9"},
-      # For the router
+      # For the API router
       {:plug, "~> 1.14"},
       # To connect Plug with Cowboy
       {:plug_cowboy, "~> 2.6"},
+      # For JSON encoding/decoding
       {:jason, "~> 1.2"},
-      # for documentation generation
+      # For documentation generation
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
-      # for the dynamic creation of test mocks
+      # For dynamic creation of test mocks
       {:mox, "~> 0.5.2", only: :test}
+    ]
+  end
+
+  # Run "mix help deps" to learn about ExDoc.
+  defp docs do
+    [
+      main: "get_started",
+      extras: ["get_started.md"],
+      favicon: "assets/favicon.png",
+      logo: "assets/logo.png",
+      authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"],
+      nest_modules_by_prefix: [
+        "P2PDocs",
+        "P2PDocs.CRDT",
+        "P2PDocs.Network",
+        "P2PDocs.API",
+        "P2PDocs.Utils"
+      ],
+      source_url_pattern:
+        "https://github.com/lilvirgola/ProgettoSistemiDistribuiti/blob/main/p2p_docs_backend/%{path}#L%{line}"
     ]
   end
 end
