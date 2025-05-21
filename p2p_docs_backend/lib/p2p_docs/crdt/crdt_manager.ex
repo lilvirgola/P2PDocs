@@ -107,7 +107,7 @@ defmodule P2PDocs.CRDT.Manager do
 
     Handler.send_init()
 
-    state = update_state(state, new_crdt, new_saver)
+    state = update_state(state, new_crdt_with_id, new_saver)
     {:noreply, state}
   end
 
