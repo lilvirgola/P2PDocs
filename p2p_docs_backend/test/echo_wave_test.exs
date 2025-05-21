@@ -1,9 +1,9 @@
 defmodule EchoWaveTest do
   use ExUnit.Case
+  import Mox
+
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.Utils
-
-  import Mox
 
   # Hide Logger messages
   @moduletag :capture_log
@@ -12,14 +12,16 @@ defmodule EchoWaveTest do
   @size 2 ** 6
   @gamma 1.2
 
-  setup [:set_mox_from_context, :verify_on_exit!, :setup_mocks]
+  setup :set_mox_global
+  setup :verify_on_exit!
+  setup :setup_mocks
 
   defp setup_mocks(context) do
     stub(P2PDocs.Network.ReliableTransportMock, :send, fn _from, to, _module, payload ->
       GenServer.cast(to, payload)
     end)
 
-    stub(P2PDocs.Network.CausalBroadcastMock, :deliver_to_causal, fn _, _ -> :ok end)
+    stub(P2PDocs.Network.CausalBroadcastMock, :deliver_to_causal, fn _ -> :ok end)
 
     {:ok, context}
   end

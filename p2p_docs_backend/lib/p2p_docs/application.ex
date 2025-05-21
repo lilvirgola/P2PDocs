@@ -10,16 +10,10 @@ defmodule P2PDocs.Application do
 
   @cookie Application.compile_env(:p2p_docs, :neighbor_handler)[:cookie] ||
             :default
-  @causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:module] ||
-                      P2PDocs.Network.CausalBroadcast
   @ets_causal_broadcast Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
                           :causal_broadcast_state
-  @crdt_manager Application.compile_env(:p2p_docs, :crdt_manager)[:module] ||
-                  P2PDocs.CRDT.Manager
   @ets_crdt_manager Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] ||
                       :crdt_manager_state
-  @api_server Application.compile_env(:p2p_docs, :api)[:module] ||
-                P2PDocs.API.Server
   @ets_neighbor_handler Application.compile_env(:p2p_docs, :neighbor_handler)[:ets_table] ||
                           :neighbor_handler_state
   @ets_echo_wave Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
@@ -47,8 +41,6 @@ defmodule P2PDocs.Application do
     :ets.new(@ets_echo_wave, [:named_table, :public, read_concurrency: true])
     :ets.new(@ets_reliable_transport, [:named_table, :public, read_concurrency: true])
 
-    # IO.inspect(@neighbor_handler, label: "ACTUAL NEIGHBOR HANDLER MODULE")
-
     Supervisor.start_link(children(), strategy: :one_for_one, name: P2PDocs.Supervisor)
   end
 
@@ -68,7 +60,9 @@ defmodule P2PDocs.Application do
     :ets.delete(@ets_causal_broadcast)
     :ets.delete(@ets_crdt_manager)
     :ets.delete(@ets_neighbor_handler)
-    # :ets.delete(@ets_api_server)
+    :ets.delete(@ets_echo_wave)
+    :ets.delete(@ets_reliable_transport)
+
     :ok
   end
 
@@ -78,18 +72,18 @@ defmodule P2PDocs.Application do
   # Each child process is defined with its module and any necessary arguments.
   # """
   defp children do
-    node_id = if Mix.env() == :test, do: :test_node, else: node()
-
     if Mix.env() == :test do
       []
     else
+      node_id = node()
+
       [
         # Registry per websocket
         P2PDocs.PubSub,
-        {@api_server, %{}},
+        {P2PDocs.API.Server, %{}},
         {P2PDocs.Network.NeighborHandler, node_id},
-        {@crdt_manager, [peer_id: node_id]},
-        {@causal_broadcast, [my_id: node_id]},
+        {P2PDocs.CRDT.Manager, [peer_id: node_id]},
+        {P2PDocs.Network.CausalBroadcast, [my_id: node_id]},
         {P2PDocs.Network.EchoWave, {node_id, []}},
         {P2PDocs.Network.ReliableTransport, [node_id: node_id]}
       ]

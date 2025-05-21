@@ -21,7 +21,7 @@ defmodule P2PDocs.CRDT.ManagerTest do
   describe "init/1" do
     test "creates new state when ETS is empty" do
       expect(P2PDocs.CRDT.CrdtTextMock, :new, fn "peer1" -> :crdt1 end)
-      expect(P2PDocs.CRDT.AutoSaverMock, :new, fn 10, "./saves/\"peer1\".txt" -> :saver1 end)
+      expect(P2PDocs.CRDT.AutoSaverMock, :new, fn _, "./saves/\"peer1\".txt" -> :saver1 end)
 
       {:ok, pid} = Manager.start_link("peer1")
       assert Process.whereis(Manager) == pid

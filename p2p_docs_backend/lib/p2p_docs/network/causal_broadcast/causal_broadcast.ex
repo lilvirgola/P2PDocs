@@ -52,13 +52,13 @@ defmodule P2PDocs.Network.CausalBroadcast do
     GenServer.call(__MODULE__, :get_state)
   end
 
-  @callback deliver_to_causal(server :: any, msg :: any) :: {:ok}
-  def deliver_to_causal(server \\ __MODULE__, msg) do
-    GenServer.cast(server, msg)
+  @callback deliver_to_causal(msg :: any) :: :ok
+  def deliver_to_causal(msg) do
+    GenServer.cast(__MODULE__, msg)
   end
 
   def get_vc_and_d_state() do
-    GenServer.call(__MODULE__, {:get_vc_and_d})
+    GenServer.call(__MODULE__, :get_vc_and_d)
   end
 
   @doc """
@@ -144,7 +144,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.merge(state.t, t_prime)
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
-    {delivered, remaining_buffer, new_d} = attempt_deliveries(new_buffer, state.d, id, [])
+    {delivered, remaining_buffer, new_d} =
+      attempt_deliveries(new_buffer, state.d, state.my_id, [])
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
       handle_delivery(delivered_msg)
@@ -155,11 +156,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
     end
 
     # Update the ETS table with the new state
-    :ets.insert(
-      @table_name,
-      {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}
-    )
-
     :ets.insert(
       @table_name,
       {state.my_id, %{state | t: new_t, d: new_d, buffer: remaining_buffer}}
@@ -191,7 +187,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
   end
 
   @impl true
-  def handle_call({:get_vc_and_d}, _from, state) do
+  def handle_call(:get_vc_and_d, _from, state) do
     Logger.debug("Node #{inspect(state.my_id)} is sending its vector clock and d!")
     {:reply, {state.t, state.d}, state}
   end
@@ -213,10 +209,11 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
       {_msg, sender_id, _t_prime} = found ->
         new_d = VectorClock.increment(d, sender_id)
-        attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, [found | delivered])
+        new_delivered = if sender_id == my_id, do: delivered, else: [found | delivered]
+        attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, new_delivered)
 
       _ ->
-        Logger.debug("ERROR: invalid element in buffer!")
+        Logger.error("Invalid element in buffer #{inspect(buffer)}")
         {delivered, buffer, d}
     end
   end

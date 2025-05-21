@@ -52,7 +52,7 @@ defmodule P2PDocs.Network.ReliableTransport do
   retrying every #{@retry_interval}ms until an ACK is received.
   """
   @callback send(from :: any, to :: any, module :: any, payload :: any) :: :ok
-  @spec send(from :: node_id(), to :: node_id(), module :: module_name(), payload :: payload()) ::
+  @spec send(from :: any(), to :: any(), module :: module_name(), payload :: payload()) ::
           :ok
   def send(from, to, module, payload) do
     GenServer.cast(__MODULE__, {:send, from, to, module, payload})

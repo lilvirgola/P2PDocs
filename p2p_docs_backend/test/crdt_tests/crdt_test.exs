@@ -2,9 +2,11 @@ defmodule CrdtTextFastTest do
   use ExUnit.Case
   alias P2PDocs.CRDT.CrdtText
   alias P2PDocs.CRDT.OSTree
-  alias P2PDocs.Utils.Math
 
   @peer "peer1"
+
+  # Hide Logger messages
+  @moduletag :capture_log
 
   setup do
     {:ok, state: CrdtText.new(@peer)}
@@ -34,7 +36,7 @@ defmodule CrdtTextFastTest do
 
     # Expect exactly `total` inserted chars
     assert OSTree.get_size(final_state.chars) == total
-    IO.inspect(OSTree.get_size(final_state.chars))
+    # IO.inspect(OSTree.get_size(final_state.chars))
 
     # All IDs unique
     # ids = Enum.map(chars, & &1.id)

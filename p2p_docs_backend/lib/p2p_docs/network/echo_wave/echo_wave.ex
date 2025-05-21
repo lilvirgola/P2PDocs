@@ -248,7 +248,7 @@ defmodule P2PDocs.Network.EchoWave do
       "#{state.id} received #{inspect(wave_id)} token for the first time, from #{inspect(from)}"
     )
 
-    causal_broadcast().deliver_to_causal(causal_broadcast(), msg)
+    causal_broadcast().deliver_to_causal(msg)
 
     children = state.neighbors -- [from]
     Enum.each(children, &send_token(state.id, &1, wave_id, msg))

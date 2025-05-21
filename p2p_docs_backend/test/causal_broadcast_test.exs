@@ -5,6 +5,9 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
   alias P2PDocs.Network.CausalBroadcast
   alias P2PDocs.Network.NaiveVectorClock
 
+  # Hide Logger messages
+  @moduletag :capture_log
+
   setup :set_mox_global
   setup :verify_on_exit!
 
@@ -85,7 +88,7 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
         )
 
       # Inject the message
-      assert :ok == CausalBroadcast.deliver_to_causal(CausalBroadcast, msg)
+      assert :ok == CausalBroadcast.deliver_to_causal(msg)
 
       # Wait for the cast & delivery
       Process.sleep(10)
