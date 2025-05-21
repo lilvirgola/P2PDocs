@@ -121,6 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let clientId = null;
   let pendingOperations = [];
   let localPendingOperations = [];
+  let neighbors = [];
   // Initialize editor as non-editable
   editor.readOnly = true;
   wsClient.onMessage(handleServerMessage);
@@ -242,7 +243,12 @@ document.addEventListener("DOMContentLoaded", () => {
       clientId = data.client_id;
       editor.value = data.content || "";
       editor.readOnly = false; // Enable editing after init
-      neighborsInput.value = data.neighbors || "";
+      neighbors = data.neighbors || [];
+      if (neighbors) {
+        neighborsInput.value = neighbors.join(", ");
+      } else {
+        neighborsInput.value = "";
+      }
       tokenInput.value = clientId;
       //editor.normalize(); // Normalize text nodes
 

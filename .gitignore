@@ -7,3 +7,5 @@
 files/
 node_modules/
 *.swp
+tests/connect.sh
+tests/disconnect.sh
