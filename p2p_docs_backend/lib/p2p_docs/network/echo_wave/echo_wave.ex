@@ -64,6 +64,7 @@ defmodule P2PDocs.Network.EchoWave do
   Initiates an Echo-Wave with given `wave_id` and message `msg`.
   Sends a token to self to kick off propagation to neighbors.
   """
+  @callback start_echo_wave(wave_id :: any, msg :: any) :: :ok
   def start_echo_wave(wave_id, msg) do
     GenServer.cast(__MODULE__, {:start_echo, wave_id, msg})
   end
@@ -85,6 +86,7 @@ defmodule P2PDocs.Network.EchoWave do
   @doc """
   Replaces this node's neighbor list with `neighbors`.
   """
+  @callback update_neighbors(neighbors :: list) :: :ok
   def update_neighbors(neighbors) do
     GenServer.cast(__MODULE__, {:update, neighbors})
   end
