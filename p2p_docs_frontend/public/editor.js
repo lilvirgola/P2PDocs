@@ -202,6 +202,10 @@ document.addEventListener("DOMContentLoaded", () => {
       tokenDiv.style.display = "none";
     } else {
       tokenDiv.style.display = "block";
+      tokenInput.select();
+      tokenInput.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(tokenInput.value);
+      showAlert("Token copied to clipboard: " + tokenInput.value, "info");
     }
     tokenInput.value = clientId;
   });
@@ -239,6 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
       editor.value = data.content || "";
       editor.readOnly = false; // Enable editing after init
       neighborsInput.value = data.neighbors || "";
+      tokenInput.value = clientId;
       //editor.normalize(); // Normalize text nodes
 
       // Process any locally queued operations
@@ -257,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (data.type === "error") {
       if (data.message === "invalid_peer_address") {
         disconnectBtn.click();
-        alert("Invalid peer address. Please try again.");
+        showAlert("Invalid peer address. Please try again.", "error");
       } else {
         console.error("Unknown error from server", data);
       }
@@ -376,6 +381,53 @@ document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
   }
+
+  function showAlert(message, type = "info") {
+    const config = {
+      info: {
+        bg: "bg-blue-100",
+        border: "border-blue-500",
+        text: "text-blue-700",
+        title: "Info"
+      },
+      success: {
+        bg: "bg-green-100",
+        border: "border-green-500",
+        text: "text-green-700",
+        title: "Success"
+      },
+      warning: {
+        bg: "bg-orange-100",
+        border: "border-orange-500",
+        text: "text-orange-700",
+        title: "Be Warned"
+      },
+      error: {
+        bg: "bg-red-100",
+        border: "border-red-500",
+        text: "text-red-700",
+        title: "Error"
+      }
+    };
+
+    const { bg, border, text, title } = config[type] || config.info;
+
+    const alert = document.createElement("div");
+    alert.className = `${bg} border-l-4 ${border} ${text} p-4 rounded shadow animate-fade-in`;
+    alert.setAttribute("role", "alert");
+
+    alert.innerHTML = `
+      <p class="font-bold">${title}</p>
+      <p>${message}</p>
+    `;
+
+    document.getElementById("alert-container").appendChild(alert);
+
+    setTimeout(() => {
+      alert.remove();
+    }, 5000);
+  }
+
 
   autoConnect();
 });
