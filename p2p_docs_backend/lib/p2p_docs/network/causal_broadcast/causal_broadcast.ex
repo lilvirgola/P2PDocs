@@ -12,26 +12,19 @@ defmodule P2PDocs.Network.CausalBroadcast do
   @moduledoc """
   This module implements our causal broadcast protocol using vector clocks.
   """
-
-  defmodule State do
-    @moduledoc """
-    This struct represents the state of the CausalBroadcast server.
-    It includes the vector clock, delivery counters, and pending messages.
-    """
-    defstruct [
-      :my_id,
-      # Vector clock
-      t: %{},
-      # Delivery counters
-      d: %{},
-      # Pending messages
-      buffer: MapSet.new(),
-      # Where to send delivery notifications (added for the tests)
-      delivery_pid: nil,
-      # Delivery log
-      delivery_log: []
-    ]
-  end
+  defstruct [
+    :my_id,
+    # Vector clock
+    t: %{},
+    # Delivery counters
+    d: %{},
+    # Pending messages
+    buffer: MapSet.new(),
+    # Where to send delivery notifications (added for the tests)
+    delivery_pid: nil,
+    # Delivery log
+    delivery_log: []
+  ]
 
   @doc """
   Starts the CausalBroadcast server with the given options.
@@ -90,7 +83,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
         [] ->
           Logger.debug("No state found in ETS, creating new state")
           # No state found in ETS, create new state
-          initial_state = %State{
+          initial_state = %__MODULE__{
             my_id: my_id,
             t: VectorClock.new(my_id),
             d: VectorClock.new(),
