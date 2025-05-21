@@ -1,4 +1,4 @@
-# P2P_Docs
+# Getting Started
 
 ## Quick Start
 

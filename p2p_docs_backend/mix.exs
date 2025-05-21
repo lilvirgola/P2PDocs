@@ -8,13 +8,24 @@ defmodule P2PDocs.MixProject do
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+
+      # Docs
       name: "P2PDocs",
       docs: [
-        main: "P2PDocs.Application",
-        extras: ["README.md"],
+        main: "get_started",
+        extras: ["get_started.md"],
+        nest_modules_by_prefix: [
+          "P2PDocs",
+          "P2PDocs.CRDT",
+          "P2PDocs.Network",
+          "P2PDocs.API",
+          "P2PDocs.Utils"
+        ],
         favicon: "assets/favicon.png",
         logo: "assets/logo.png",
-        authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"]
+        authors: ["Alessandro De Biasi", "Alessandro Minisini", "Nazareno Piccin"],
+        source_url_pattern:
+          "https://github.com/lilvirgola/ProgettoSistemiDistribuiti/blob/main/p2p_docs_backend/%{path}#L%{line}"
       ]
     ]
   end

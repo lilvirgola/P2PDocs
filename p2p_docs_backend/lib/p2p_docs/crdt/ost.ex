@@ -1,6 +1,7 @@
 defmodule P2PDocs.CRDT.OSTree.Node do
   @moduledoc """
   Internal node struct for the AVL order-statistics tree.
+
   Fields:
     - `value`: the stored value
     - `left`: left child (another `OSTree.Node` or `nil`)

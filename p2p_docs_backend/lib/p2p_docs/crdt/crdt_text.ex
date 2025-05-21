@@ -17,7 +17,7 @@ defmodule P2PDocs.CRDT.CrdtText do
   @type pos_digit :: {non_neg_integer(), String.t()}
   @type position :: [pos_digit()]
   @type crdt_char :: %{id: char_id(), pos: position(), value: binary()}
-  @type t :: %CRDT{
+  @type t() :: %CRDT{
           chars: OSTree.t(),
           pos_by_id: %{optional(char_id()) => position()},
           strategies: %{optional(non_neg_integer()) => :plus | :minus},
