@@ -4,8 +4,8 @@ services:
     container_name: p2p_docs_backend
     volumes:
       - ./files:/app/saves
-    # environment:
-    #   ERL_NODE_NAME: "node@192.168.178.19"  # override if needed
+    environment:
+      ERL_NODE_NAME: "node@192.168.178.252"  # override if needed
     ports:
       - "4369:4369" # epmd
       - "9000:9000" # fixed node port

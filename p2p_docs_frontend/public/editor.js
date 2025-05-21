@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
           peerAddressInput.value = peerId;
           connectBtn.click();
         }
-        else{
+        else {
           disconnectBtn.click();
         }
       } else {
@@ -277,74 +277,74 @@ document.addEventListener("DOMContentLoaded", () => {
 
   editor.addEventListener("beforeinput", (e) => {
     const { inputType, data, target } = e;
-  const oldVal = e.target.value;
-  const start = target.selectionStart;
-  const end   = target.selectionEnd;
+    const oldVal = e.target.value;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
 
-  // figure out what (if anything) is being inserted
-  let inserted = data;
-  if (!inserted && inputType === 'insertLineBreak') {
-    // Enter key in a textarea
-    inserted = '\n';
-  }
+    // figure out what (if anything) is being inserted
+    let inserted = data;
+    if (!inserted && inputType === 'insertLineBreak') {
+      // Enter key in a textarea
+      inserted = '\n';
+    }
 
-  // INSERTIONS (typing, paste, enter, etc.)
-  if (inputType.startsWith('insert') && inserted) {
-    const insertPos = start;
-    for (let i = 0; i < inserted.length; i++) {
-     let operation = ({
-        type:     'insert',
-        char:     inserted[i],
-        index: insertPos + i + 1,
-        client_id: clientId
-      });
-      if (wsClient.send(operation)) {
-        pendingOperations.push(operation);
+    // INSERTIONS (typing, paste, enter, etc.)
+    if (inputType.startsWith('insert') && inserted) {
+      const insertPos = start;
+      for (let i = 0; i < inserted.length; i++) {
+        let operation = ({
+          type: 'insert',
+          char: inserted[i],
+          index: insertPos + i + 1,
+          client_id: clientId
+        });
+        if (wsClient.send(operation)) {
+          pendingOperations.push(operation);
+        }
       }
     }
-  }
-  // DELETIONS (backspace, delete key, cut, selection delete)
-  else if (inputType.startsWith('delete')) {
-    let deletedText = '';
-    let deletePos   = start;
+    // DELETIONS (backspace, delete key, cut, selection delete)
+    else if (inputType.startsWith('delete')) {
+      let deletedText = '';
+      let deletePos = start;
 
-    //console.log(inputType, start, end, oldVal);
+      //console.log(inputType, start, end, oldVal);
 
-    if(start < end){
-      deletedText = oldVal.slice(start, end);
-      deletePos   = start;
-    }else{
-
-    switch (inputType) {
-      case 'deleteContentBackward':
-        deletePos   = start - 1;
-        deletedText = oldVal.charAt(deletePos);
-        break;
-      case 'deleteContentForward':
-        deletePos   = start;
-        deletedText = oldVal.charAt(deletePos);
-        break;
-      default:
-        // deleteByCut, deleteContent, deleteByDrag, etc.
+      if (start < end) {
         deletedText = oldVal.slice(start, end);
-        deletePos   = start;
-    }
-  }
+        deletePos = start;
+      } else {
 
-    for (let i = 0; i < deletedText.length; i++) {
-      let operation = ({
-        type:     'delete',
-        index: deletePos + 1,
-        client_id: clientId
-      });
-      if (wsClient.send(operation)) {
-        pendingOperations.push(operation);
+        switch (inputType) {
+          case 'deleteContentBackward':
+            deletePos = start - 1;
+            deletedText = oldVal.charAt(deletePos);
+            break;
+          case 'deleteContentForward':
+            deletePos = start;
+            deletedText = oldVal.charAt(deletePos);
+            break;
+          default:
+            // deleteByCut, deleteContent, deleteByDrag, etc.
+            deletedText = oldVal.slice(start, end);
+            deletePos = start;
+        }
+      }
+
+      for (let i = 0; i < deletedText.length; i++) {
+        let operation = ({
+          type: 'delete',
+          index: deletePos + 1,
+          client_id: clientId
+        });
+        if (wsClient.send(operation)) {
+          pendingOperations.push(operation);
+        }
       }
     }
+    // (you can add other inputTypes if you care about undo/formatting/etc.)
   }
-  // (you can add other inputTypes if you care about undo/formatting/etc.)
-  }
-  
+
   );
 
   function applyOperations(op) {
@@ -365,19 +365,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function insertAt(index, char) {
     let cursor = editor.selectionStart;
-    if (cursor >= index) cursor+=1;
+    if (cursor >= index) cursor += 1;
     index = index - 1; // zero-based
     toEdit = editor.value;
-    editor.value = toEdit.slice(0,index) + char + toEdit.slice(index);
+    editor.value = toEdit.slice(0, index) + char + toEdit.slice(index);
     if (isRemoteUpdate) editor.setSelectionRange(cursor, cursor);
   }
 
   function deleteAt(index) {
     let cursor = editor.selectionStart;
-    if (cursor >= index) cursor = max(0, cursor - 1);
+    if (cursor >= index) cursor = Math.max(0, cursor - 1);
     index = index - 1;
     toEdit = editor.value;
-    editor.value = toEdit.slice(0,index) + toEdit.slice(index+1);
+    editor.value = toEdit.slice(0, index) + toEdit.slice(index + 1);
     if (isRemoteUpdate) {
       editor.setSelectionRange(cursor, cursor);
     }

@@ -202,7 +202,7 @@ defmodule P2PDocs.CRDT.Manager do
     %__MODULE__{
       peer_id: peer_id,
       crdt: crdt_text().new(peer_id),
-      auto_saver: auto_saver().new(10, "./saves/#{inspect(peer_id)}.txt")
+      auto_saver: auto_saver().new(1, "./saves/#{inspect(peer_id)}.txt")
     }
   end
 

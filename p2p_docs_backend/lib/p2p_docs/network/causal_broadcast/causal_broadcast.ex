@@ -147,7 +147,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     {delivered, remaining_buffer, new_d} = attempt_deliveries(new_buffer, state.d, id, [])
 
     for {delivered_msg, delivered_id, delivered_t} <- delivered do
-      handle_delivery(msg)
+      handle_delivery(delivered_msg)
 
       Logger.info(
         "[#{node()}] DELIVERED #{inspect(delivered_msg)} from #{inspect(delivered_id)} with VC: #{inspect(delivered_t)}"
