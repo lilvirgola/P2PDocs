@@ -41,7 +41,7 @@ defmodule P2PDocs.CRDT.ManagerTest do
 
       {:ok, _pid} = Manager.start_link("peer2")
       # call into the GenServer to verify the restored CRDT
-      assert GenServer.call(Manager, {:get_crdt}) == :foo
+      assert GenServer.call(Manager, :get_crdt) == :foo
     end
   end
 

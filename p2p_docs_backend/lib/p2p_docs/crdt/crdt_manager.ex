@@ -8,8 +8,6 @@ defmodule P2PDocs.CRDT.Manager do
 
   import P2PDocs.Utils.Callbacks
 
-
-
   # ETS table where the manager state is stored
   @table_name Application.compile_env(:p2p_docs, :crdt_manager)[:ets_table] || :crdt_manager_state
 
@@ -29,9 +27,9 @@ defmodule P2PDocs.CRDT.Manager do
   @doc """
   Sends a generic message to the manager.
   """
-  @callback receive(msg :: any) :: :ok
-  @spec receive(msg :: any()) :: :ok
-  def receive(msg), do: GenServer.cast(__MODULE__, msg)
+  @callback receive_msg(msg :: any) :: :ok
+  @spec receive_msg(msg :: any()) :: :ok
+  def receive_msg(msg), do: GenServer.cast(__MODULE__, msg)
 
   @doc """
   Fetches the plain-text representation of the CRDT.

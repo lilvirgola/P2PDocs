@@ -3,8 +3,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
   # this can be replaced with a more efficient implementation later
   alias P2PDocs.Network.NaiveVectorClock, as: VectorClock
-  alias P2PDocs.Network.EchoWave
   require Logger
+  import P2PDocs.Utils.Callbacks
 
   @table_name Application.compile_env(:p2p_docs, :causal_broadcast)[:ets_table] ||
                 :causal_broadcast_state
@@ -114,7 +114,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.increment(state.t, state.my_id)
     Logger.debug("[#{node()}] BROADCASTING #{inspect(msg)} with VC: #{inspect(new_t)}")
     msg = {:message, msg, state.my_id, new_t}
-    EchoWave.start_echo_wave(new_t, msg)
+    echo_wave().start_echo_wave(new_t, msg)
     # Update the ETS table with the new state
     :ets.insert(@table_name, {state.my_id, %{state | t: new_t}})
     {:noreply, %{state | t: new_t}}
@@ -239,7 +239,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
     # Placeholder for actual delivery logic
     Logger.info("Delivering message: #{inspect(msg)}")
 
-    P2PDocs.CRDT.Manager.receive(msg)
+    crdt_manager().receive_msg(msg)
   end
 
   @impl true
