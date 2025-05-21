@@ -38,7 +38,6 @@ defmodule P2PDocs.CRDT.OSTree do
           root: Node.t(a) | nil
         }
 
-
   defstruct comparator: nil, root: nil
 
   @doc """
@@ -105,7 +104,7 @@ defmodule P2PDocs.CRDT.OSTree do
     nil
   end
 
-   @doc """
+  @doc """
   Return the ordered list of the elements of the tree.
   """
   @spec to_list(t(a)) :: [a] when a: var
@@ -113,7 +112,7 @@ defmodule P2PDocs.CRDT.OSTree do
     inorder(root)
   end
 
-     @doc """
+  @doc """
   Return the grahviz representation of the tree.
   Useful for debugging and graphic purposes.
   """

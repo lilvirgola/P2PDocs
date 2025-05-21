@@ -17,7 +17,7 @@ defmodule P2PDocs.Network.EchoWave do
   alias P2PDocs.Network.ReliableTransport
 
   @table_name Application.compile_env(:p2p_docs, :echo_wave)[:ets_table] ||
-                          :echo_wave_state
+                :echo_wave_state
 
   @typedoc """
   State of the EchoWave server.
@@ -106,6 +106,7 @@ defmodule P2PDocs.Network.EchoWave do
   def init({id, neighbors}) do
     Logger.debug("Starting EchoWave module for node #{inspect(id)}")
     Process.flag(:trap_exit, true)
+
     try do
       case :ets.lookup(@table_name, id) do
         [{_key, state}] ->
@@ -163,6 +164,7 @@ defmodule P2PDocs.Network.EchoWave do
       else
         new_state
       end
+
     :ets.insert(@table_name, {state.id, new_state})
     {:noreply, new_state}
   end
@@ -173,10 +175,11 @@ defmodule P2PDocs.Network.EchoWave do
   Replaces neighbors list with the provided `neighbors`.
   """
   def handle_cast({:update, neighbors}, state) do
-    new_state=%{state | neighbors: neighbors}
+    new_state = %{state | neighbors: neighbors}
     :ets.insert(@table_name, {state.id, new_state})
     {:noreply, new_state}
   end
+
   @impl true
   @doc """
   Appends the provided `neighbors` to the existing list.
@@ -197,6 +200,7 @@ defmodule P2PDocs.Network.EchoWave do
     :ets.insert(@table_name, {state.id, new_state})
     {:noreply, new_state}
   end
+
   @impl true
   def handle_cast({:wave_complete, _from, wave_id, count}, state) do
     Logger.debug("Echo-Wave #{inspect(wave_id)} ended with #{count} nodes")
@@ -281,7 +285,7 @@ defmodule P2PDocs.Network.EchoWave do
   defp handle_existing_wave(state, from, wave_id, count, prev, pending) do
     Logger.debug("#{state.id} received #{inspect(wave_id)} token from #{inspect(from)}")
     updated = %{prev | remaining: prev.remaining -- [from], count: prev.count + count}
-    new_state=%{state | pending_waves: Map.put(pending, wave_id, updated)}
+    new_state = %{state | pending_waves: Map.put(pending, wave_id, updated)}
     :ets.insert(@table_name, {state.id, new_state})
     new_state
   end

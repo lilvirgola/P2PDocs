@@ -29,6 +29,8 @@ defmodule P2PDocs.CRDT.Manager do
   @doc """
   Sends a generic message to the manager.
   """
+  @callback receive(msg :: any) :: :ok
+  @spec receive(msg :: any()) :: :ok
   def receive(msg), do: GenServer.cast(__MODULE__, msg)
 
   @doc """
@@ -94,7 +96,13 @@ defmodule P2PDocs.CRDT.Manager do
     {:reply, text, state}
   end
 
-    @impl true
+  @impl true
+  def handle_call(:get_crdt, _from, state) do
+    Logger.debug("Sending raw CRDT for #{inspect(state.peer_id)}")
+    {:reply, state.crdt, state}
+  end
+
+  @impl true
   def handle_cast({:upd_crdt, new_crdt}, state) do
     Logger.debug("Node #{inspect(state.peer_id)} is updating its crdt state!")
 
@@ -109,12 +117,6 @@ defmodule P2PDocs.CRDT.Manager do
 
     state = update_state(state, new_crdt_with_id, new_saver)
     {:noreply, state}
-  end
-
-  @impl true
-  def handle_call(:get_crdt, _from, state) do
-    Logger.debug("Sending raw CRDT for #{inspect(state.peer_id)}")
-    {:reply, state.crdt, state}
   end
 
   @impl true
