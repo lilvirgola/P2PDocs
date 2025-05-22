@@ -11,8 +11,8 @@ defmodule P2PDocs.MixProject do
 
       # Docs
       name: "P2PDocs",
-      docs: docs()
-    ]
+      docs: docs(),
+      ]
   end
 
   # Run "mix help compile.app" to learn about applications.
