@@ -38,7 +38,7 @@ Follow the instructions on the browser and use it!
 
 ## Docs
 
-Compiling and Viewing the Elixir documentation of the backend can be done with the following commands:
+Compiling and viewing the Elixir documentation of the backend can be done with the following commands:
 
 ```bash
 cd p2p_docs_backend
