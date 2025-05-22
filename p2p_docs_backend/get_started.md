@@ -50,9 +50,9 @@ dot -Tsvg -O random_topology.dot
 
 End-to-end testing across multiple instances is performed via custom scripts rather than a built-in framework.
 
-`start_n_instances_for_tests.sh <n>` 
+`tests/start_n_instances_for_tests.sh <n>` 
 Launches `n` containers of **P2PDocs**, all attached to the dedicated Docker network `172.16.1.0/24`.  
-Each node’s frontend is exposed at `localhost:<3000+n>`.
+Each node’s frontend is exposed at `localhost:<3000+idx>`, where `idx` is the peer number.
 
 In the `tests/` directory:
 
