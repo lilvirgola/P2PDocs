@@ -14,14 +14,14 @@ Users should be able to edit the text even while offline, and the system should 
 
 # Quick Start
 
-## 1. Clone & Setup
+### 1. Clone & Setup
 
 ```bash
 git clone https://github.com/lilvirgola/ProgettoSistemiDistribuiti.git
 cd ProgettoSistemiDistribuiti
 ```
 
-## 2. Start Node
+### 2. Start Node
 Ensure that Docker is correctly installed. Then run on terminal:
 
 ```bash
