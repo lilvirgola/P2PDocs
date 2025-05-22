@@ -1,4 +1,4 @@
-# Distributed Systems Project -- P2PDocs
+# Distributed Systems Project - P2PDocs
 
 **Academic Year:** [2024/2025]  
 **Team members:**  
