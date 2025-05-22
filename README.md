@@ -22,7 +22,9 @@ cd ProgettoSistemiDistribuiti
 ```
 
 ### 2. Start a Node
-Ensure that Docker is correctly installed. Then run on terminal:
+Ensure that Docker is correctly installed. 
+
+Inside `docker-compose.yml` override the environment variable `ERL_NODE_NAME` with your current IP, then run on terminal:
 
 ```bash
 sudo docker compose up --build

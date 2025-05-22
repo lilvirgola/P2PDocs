@@ -10,7 +10,9 @@ cd ProgettoSistemiDistribuiti
 ```
 
 ### 2. Start Node
-Ensure that Docker is correctly installed. Then run on terminal:
+Ensure that Docker is correctly installed.
+
+Inside `docker-compose.yml` override the environment variable `ERL_NODE_NAME` with your current IP, then run on terminal:
 
 ```bash
 sudo docker compose up --build
@@ -53,3 +55,11 @@ To inspect logs for a single peer numbered as `idx`:
 ```bash
 sudo docker logs test<idx>
 ```
+
+## Docs
+
+Compiling and viewing the Elixir documentation of the backend can be done with the following commands:
+
+```bash
+cd p2p_docs_backend
+mix docs -f html --open
