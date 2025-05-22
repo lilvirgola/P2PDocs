@@ -32,6 +32,7 @@ Unit tests for each module are implemented with Elixir’s built-in ExUnit frame
 
 ```bash
 cd p2p_docs_backend/
+mix deps.get
 mix test
 ```
 
@@ -39,7 +40,7 @@ The output will indicate which tests passed and highlight any failures.
 
 ### View Generated Topology in EchoWave tests
 
-The EchoWave unit test automatically generates a dot file that contains the representation of the random connected graph used to test the module. If you want to visualize it, run the follwoing command:
+The EchoWave unit test automatically generates a dot file that contains the representation of the random connected graph used to test the module. If you want to visualize it, run the following command:
 
 ```bash
 dot -Tsvg -O random_topology.dot
