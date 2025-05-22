@@ -68,7 +68,7 @@ defmodule OSTree.PerformanceTest do
         end)
       end)
 
-    IO.puts("Insertion of #{@total_elements} elements took #{time}μs")
+    IO.puts("OSTreeTest: insertion of #{@total_elements} elements took #{time}μs")
 
     %Node{size: s} = tree.root
     assert s == @total_elements
@@ -90,7 +90,7 @@ defmodule OSTree.PerformanceTest do
         end
       end)
 
-    IO.puts("10_000 kth_element selections took #{time}μs")
+    IO.puts("OSTreeTest: 10_000 kth_element selections took #{time}μs")
     # Expect under ~200ms
     # assert time < 200_000
   end
@@ -111,7 +111,7 @@ defmodule OSTree.PerformanceTest do
         Enum.reduce(to_delete, tree, fn x, acc -> OSTree.delete(acc, x) end)
       end)
 
-    IO.puts("Deleting 5_000 elements took #{time}μs")
+    IO.puts("OSTreeTest: deleting 5_000 elements took #{time}μs")
 
     %Node{size: s2} = tree2.root
     assert s2 == 5_000

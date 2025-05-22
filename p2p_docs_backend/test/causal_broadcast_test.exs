@@ -96,7 +96,7 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
     end
 
     test "when higher vc is recived it doesn't deliver the message" do
-       vc_lower =
+      vc_lower =
         NaiveVectorClock.new(:node1)
         |> NaiveVectorClock.increment(:node1)
 
@@ -132,14 +132,16 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
     end
 
     test "concurrent messages are immediatly delivered" do
-       vc_1 =
+      vc_1 =
         NaiveVectorClock.new(:node1)
         |> NaiveVectorClock.increment(:node1)
 
       msg_1 = {:message, "world", :node1, vc_1}
+
       vc_2 =
         NaiveVectorClock.new(:node2)
         |> NaiveVectorClock.increment(:node2)
+
       msg_2 = {:message, "hello", :node2, vc_2}
       # Expect the CRDT‐manager mock to receive exactly the bare payload
       P2PDocs.CRDT.ManagerMock
@@ -169,7 +171,4 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
       assert MapSet.size(state2.buffer) == 0
     end
   end
-
-
-
 end

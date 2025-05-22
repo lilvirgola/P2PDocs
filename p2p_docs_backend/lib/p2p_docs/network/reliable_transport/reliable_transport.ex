@@ -18,7 +18,7 @@ defmodule P2PDocs.Network.ReliableTransport do
                 :reliable_transport_state
 
   @retry_interval Application.compile_env(:p2p_docs, :reliable_transport)[:timeout] ||
-                5000
+                    5000
 
   @type node_id :: String.t()
   @type module_name :: module()

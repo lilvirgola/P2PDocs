@@ -4,7 +4,6 @@ import Config
 
 config :logger, level: :info
 
-
 config :p2p_docs, :vector_clock,
   # The module to use for vector clock implementation
   module: P2PDocs.Network.NaiveVectorClock

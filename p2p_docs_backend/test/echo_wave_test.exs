@@ -5,7 +5,6 @@ defmodule EchoWaveTest do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.Utils
 
-
   # Set testing parameters
   @size 2 ** 6
   @gamma 1.2

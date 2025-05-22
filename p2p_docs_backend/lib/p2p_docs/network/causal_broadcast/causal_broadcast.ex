@@ -158,7 +158,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
        state
        | t: new_t,
          d: new_d,
-         buffer: remaining_buffer,
+         buffer: remaining_buffer
      }}
   end
 
