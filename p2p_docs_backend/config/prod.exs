@@ -36,4 +36,5 @@ config :p2p_docs, :echo_wave,
 # Reliable Transport configuration
 config :p2p_docs, :reliable_transport,
   module: P2PDocs.Network.ReliableTransport,
-  ets_table: :reliable_transport_state
+  ets_table: :reliable_transport_state,
+  timeout: 1000
