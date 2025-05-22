@@ -209,7 +209,7 @@ defmodule P2PDocs.Network.CausalBroadcast do
 
       {_msg, sender_id, _t_prime} = found ->
         new_d = VectorClock.increment(d, sender_id)
-        new_delivered = if sender_id == my_id, do: delivered, else: [found | delivered]
+        new_delivered = if sender_id == my_id, do: delivered, else: [delivered] ++ [found]
         attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, new_delivered)
 
       _ ->
