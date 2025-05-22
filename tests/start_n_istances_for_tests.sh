@@ -1,4 +1,10 @@
 #!/bin/bash
+
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root. Please use sudo."
+    exit 1
+fi
+
 ## Clenup function
 function ctrl_c() {
         echo "exiting..."
@@ -39,7 +45,7 @@ if [ "$NUM_INSTANCES" -lt 1 ]; then
     exit 1
 fi
 echo "creating shared network..."
-sudo docker network create $SHARED_NET --subnet=172.16.1.0/24 || echo "Network already exists, skipping creation."
+docker network create $SHARED_NET --subnet=172.16.1.0/24 || echo "Network already exists, skipping creation."
 for ((i=1; i<=NUM_INSTANCES; i++)); do
     INSTANCE="${INSTANCE_NAME}${i}"
     echo "Starting instance: $INSTANCE"
