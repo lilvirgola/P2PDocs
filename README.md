@@ -36,7 +36,7 @@ localhost:3000
 
 Follow the instructions on the browser and use it!
 
-# Docs
+## Docs
 
 Compiling and Viewing the Elixir documentation of the backend can be done with the following commands:
 
