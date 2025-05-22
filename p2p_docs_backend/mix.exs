@@ -4,15 +4,15 @@ defmodule P2PDocs.MixProject do
   def project do
     [
       app: :p2p_docs,
-      version: "0.1.0",
+      version: "1.0.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
 
       # Docs
       name: "P2PDocs",
-      docs: docs(),
-      ]
+      docs: docs()
+    ]
   end
 
   # Run "mix help compile.app" to learn about applications.
@@ -57,7 +57,7 @@ defmodule P2PDocs.MixProject do
         "P2PDocs.Utils"
       ],
       source_url_pattern:
-        "https://github.com/lilvirgola/ProgettoSistemiDistribuiti/blob/main/p2p_docs_backend/%{path}#L%{line}"
+        "https://github.com/lilvirgola/P2PDocs/blob/main/p2p_docs_backend/%{path}#L%{line}"
     ]
   end
 end

@@ -5,8 +5,8 @@
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/lilvirgola/ProgettoSistemiDistribuiti.git
-cd ProgettoSistemiDistribuiti
+git clone https://github.com/lilvirgola/P2PDocs.git
+cd P2PDocs
 ```
 
 ### 2. Start Node
@@ -63,3 +63,4 @@ Compiling and viewing the Elixir documentation of the backend can be done with t
 ```bash
 cd p2p_docs_backend
 mix docs -f html --open
+```

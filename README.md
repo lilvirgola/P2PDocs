@@ -17,8 +17,8 @@ Users should be able to edit the text even while offline, and the system should 
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/lilvirgola/ProgettoSistemiDistribuiti.git
-cd ProgettoSistemiDistribuiti
+git clone https://github.com/lilvirgola/P2PDocs.git
+cd P2PDocs
 ```
 
 ### 2. Start a Node
