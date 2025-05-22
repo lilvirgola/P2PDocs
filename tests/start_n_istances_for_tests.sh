@@ -6,7 +6,7 @@ function ctrl_c() {
         for ((i=1; i<=NUM_INSTANCES; i++)); do
             INSTANCE="${INSTANCE_NAME}${i}"
             echo "Stopping instance: $INSTANCE"
-            docker compose -f ../docker-compose-test.yml --project-name test$i down
+            sudo docker compose -f ../docker-compose-test.yml --project-name test$i down
         done
         echo "All instances stopped."
         echo "Cleaning up..."
@@ -48,7 +48,7 @@ for ((i=1; i<=NUM_INSTANCES; i++)); do
     export FRONTEND_PORT=$PORT
     export NUMBER=$(($i + 1))
     echo "Using number: $NUMBER"
-    docker compose -f ../docker-compose-test.yml --project-name test$i up --build -d
+    sudo docker compose -f ../docker-compose-test.yml --project-name test$i up --build -d
 done
 
 echo "All instances started, creating the test scripts..."
@@ -67,7 +67,7 @@ if [ "\$1" -lt 1 ]||[ "\$1" -gt ${NUM_INSTANCES} ]; then
 fi
 INSTANCE="${INSTANCE_NAME}\${1}_backend"
 echo "disconnecting \$INSTANCE... form ${SHARED_NET}"
-docker network disconnect ${SHARED_NET} \$INSTANCE || echo "Network not found, skipping disconnection."
+sudo docker network disconnect ${SHARED_NET} \$INSTANCE || echo "Network not found, skipping disconnection."
 echo "Done, exiting script."
 EOL
 chmod +x disconnect.sh
@@ -86,7 +86,7 @@ if [ "\$1" -lt 1 ]||[ "\$1" -gt ${NUM_INSTANCES} ]; then
 fi
 INSTANCE="${INSTANCE_NAME}\${1}_backend"
 echo "connecting \$INSTANCE... form ${SHARED_NET}"
-docker network connect ${SHARED_NET} \$INSTANCE || echo "Network not found, skipping connection."
+sudo docker network connect ${SHARED_NET} \$INSTANCE || echo "Network not found, skipping connection."
 echo "Done, exiting script."
 EOL
 chmod +x connect.sh
