@@ -144,16 +144,8 @@ defmodule P2PDocs.Network.CausalBroadcast do
     new_t = VectorClock.merge(state.t, t_prime)
     new_buffer = MapSet.put(state.buffer, {msg, id, t_prime})
 
-    {delivered, remaining_buffer, new_d} =
-      attempt_deliveries(new_buffer, state.d, state.my_id, [])
-
-    for {delivered_msg, delivered_id, delivered_t} <- delivered do
-      handle_delivery(delivered_msg)
-
-      Logger.info(
-        "[#{node()}] DELIVERED #{inspect(delivered_msg)} from #{inspect(delivered_id)} with VC: #{inspect(delivered_t)}"
-      )
-    end
+    {remaining_buffer, new_d} =
+      attempt_deliveries(new_buffer, state.d, state.my_id)
 
     # Update the ETS table with the new state
     :ets.insert(
@@ -167,7 +159,6 @@ defmodule P2PDocs.Network.CausalBroadcast do
        | t: new_t,
          d: new_d,
          buffer: remaining_buffer,
-         delivery_log: state.delivery_log ++ delivered
      }}
   end
 
@@ -198,23 +189,23 @@ defmodule P2PDocs.Network.CausalBroadcast do
   # This function checks if the messages in the buffer can be delivered based on the vector clocks and the current state.
 
   # """
-  defp attempt_deliveries(buffer, d, my_id, delivered) do
+  defp attempt_deliveries(buffer, d, my_id) do
     # For each message in the buffer, check if it can be delivered
     deliverable =
       Enum.find(buffer, fn {_msg, sender_id, t_prime} -> deliverable?(t_prime, sender_id, d) end)
 
     case deliverable do
       nil ->
-        {delivered, buffer, d}
+        {buffer, d}
 
-      {_msg, sender_id, _t_prime} = found ->
+      {msg, sender_id, _t_prime} = found ->
         new_d = VectorClock.increment(d, sender_id)
-        new_delivered = if sender_id == my_id, do: delivered, else: delivered ++ [found]
-        attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id, new_delivered)
+        if sender_id != my_id, do: handle_delivery(msg)
+        attempt_deliveries(MapSet.delete(buffer, found), new_d, my_id)
 
       _ ->
         Logger.error("Invalid element in buffer #{inspect(buffer)}")
-        {delivered, buffer, d}
+        {buffer, d}
     end
   end
 
