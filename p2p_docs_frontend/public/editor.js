@@ -108,7 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const neighborsBtn = document.getElementById("neighbors-btn");
   const neighborsDiv = document.getElementById("neighbors");
   const neighborsInput = document.getElementById("neighbors-input");
-  let prevValue = editor.value;
   // CSS fixes for overflow
   Object.assign(editor.style, {
     whiteSpace: "pre-wrap",
