@@ -237,7 +237,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handleServerMessage(data) {
-    console.log(data);
     if (data.type === "init") {
       clientId = data.client_id;
       editor.value = data.content || "";
@@ -306,9 +305,6 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (inputType.startsWith('delete')) {
       let deletedText = '';
       let deletePos = start;
-
-      //console.log(inputType, start, end, oldVal);
-
       if (start < end) {
         deletedText = oldVal.slice(start, end);
         deletePos = start;
