@@ -21,7 +21,7 @@ git clone https://github.com/lilvirgola/ProgettoSistemiDistribuiti.git
 cd ProgettoSistemiDistribuiti
 ```
 
-### 2. Start Node
+### 2. Start a Node
 Ensure that Docker is correctly installed. Then run on terminal:
 
 ```bash
