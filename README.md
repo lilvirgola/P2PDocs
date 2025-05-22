@@ -1,10 +1,13 @@
-# Progetto corso Sistemi Distribuiti
+# Distributed Systems Project -- P2PDocs
 
-**Anno Accademico:** [2024/2025]  
-**Membri del team:**  
+**Academic Year:** [2024/2025]  
+**Team members:**  
 - [Alessandro De Biasi] (@lilvirgola)  
 - [Alessandro Minisini] (@alemini18)  
-- [Nazareno Piccin] (@Nackha1) FRONT-END ENTHUSIAST
+- [Nazareno Piccin] (@Nackha1)
 
-## 📌 Descrizione del progetto
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+## 📌 Project Description
+
+**P2PDocs** is a decentralized collaborative text editor that implements a serverless architecture, eliminating single points of failure inherent in client-server models. The system enables real-time concurrent editing through direct peer-to-peer communication in a dynamic network topology.
+
+Users should be able to edit the text even while offline, and the system should automatically resolve emerging conflicts once the connection is re-established.
