@@ -5,6 +5,7 @@ services:
     volumes:
       - ./files:/app/saves
     environment:
+      NODE_ENV: "prod"
       ERL_NODE_NAME: "node@192.168.178.252"  # override if needed
     ports:
       - "4369:4369" # epmd

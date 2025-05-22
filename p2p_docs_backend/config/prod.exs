@@ -2,6 +2,9 @@ import Config
 # This is the configuration file for the P2PDocs application.
 # It contains settings for the API server, network parameters, and other application-specific configurations.
 
+config :logger, level: :info
+
+
 config :p2p_docs, :vector_clock,
   # The module to use for vector clock implementation
   module: P2PDocs.Network.NaiveVectorClock

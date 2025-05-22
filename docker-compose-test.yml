@@ -10,6 +10,7 @@ services:
     volumes:
       - ./files:/app/saves
     environment:
+      NODE_ENV: "prod"
       ERL_NODE_NAME: "node@172.16.1.${NUMBER}"  # override if needed
     restart: unless-stopped
 

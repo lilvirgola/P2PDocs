@@ -15,6 +15,15 @@ DISTRIBUTION_PORT=9000
 ERL_DIST_FLAGS="-kernel inet_dist_listen_min ${DISTRIBUTION_PORT} inet_dist_listen_max ${DISTRIBUTION_PORT}"
 
 echo "Starting distributed IEx node as ${NODE_NAME} on port ${DISTRIBUTION_PORT}"
+if [ -n "$NODE_ENV" ]; then
+    echo "Using ENV: ${NODE_ENV}"
+    export MIX_ENV=$NODE_ENV
+
+else
+    echo "Using ENV: dev"
+    export MIX_ENV=dev
+fi
+
 exec elixir --name "${NODE_NAME}" \
     --cookie "p2pdocs" \
     --erl "${ERL_DIST_FLAGS}" \
