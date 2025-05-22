@@ -12,7 +12,7 @@
 
 Users should be able to edit the text even while offline, and the system should automatically resolve emerging conflicts once the connection is re-established.
 
-# Quick Start
+## Quick Start
 
 ### 1. Clone & Setup
 
