@@ -3,27 +3,53 @@
 ## Quick Start
 
 ### 1. Clone & Setup
+
 ```bash
 git clone https://github.com/lilvirgola/ProgettoSistemiDistribuiti.git
-cd p2p_docs
-mix deps.get
-```
-### 2. Start Nodes
-Open separate terminals:
-Terminal 1 (Node 1)
-```bash
-iex --name node1@127.0.0.1 -S mix
-```
-Terminal 2 (Node 2)
-```bash
-iex --name node2@127.0.0.1 -S mix
+cd ProgettoSistemiDistribuiti
 ```
 
-The neighbor handler and causalbrodcast modules both start automatically with the supervisor on the P2PDocs.Application module
+### 2. Start Node
+Ensure that Docker is correctly installed. Then run on terminal:
 
-### 3. Send a broadcast message (for testing)
-just write
-```elixir
-P2PDocs.Network.CausalBroadcast.broadcast("message")
+```bash
+sudo docker compose up --build
 ```
-message can be any type, r
+
+Al the modules start automatically with the supervisor on the P2PDocs.Application module. The front-end can be found on
+
+```bash
+localhost:3000
+```
+
+Follow the instructions on the browser and use it!
+
+## Testing
+
+Unit tests for each module are implemented with Elixir’s built-in ExUnit framework and, where needed, the Mox library for mocking inter-module calls. To run them, execute:
+
+```bash
+mix test
+```
+
+The output will indicate which tests passed and highlight any failures.
+
+### Multi-Node (System-Wide) Tests
+
+End-to-end testing across multiple instances is performed via custom scripts rather than a built-in framework.
+
+`start_n_instances_for_tests.sh <n>` 
+Launches `n` containers of **P2PDocs**, all attached to the dedicated Docker network `172.16.1.0/24`.  
+Each node’s frontend is exposed at `localhost:<3000+n>`.
+
+In the `tests/` directory:
+
+- `disconnect.sh <idx>` Disconnects peer `idx` from the network.
+- `connect.sh <idx>` Reconnects peer `idx` to the network.
+
+
+To inspect logs for a single peer numbered as `idx`:
+
+```bash
+sudo docker logs test<idx>
+```
