@@ -2,8 +2,6 @@ defmodule P2PDocs.Network.NaiveVectorClockTest do
   use ExUnit.Case
   alias P2PDocs.Network.NaiveVectorClock
 
-  # Hide Logger messages
-  @moduletag :capture_log
 
   describe "new/0" do
     test "creates an empty vector clock" do

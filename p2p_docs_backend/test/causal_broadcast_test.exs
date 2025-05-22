@@ -5,9 +5,6 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
   alias P2PDocs.Network.CausalBroadcast
   alias P2PDocs.Network.NaiveVectorClock
 
-  # Hide Logger messages
-  @moduletag :capture_log
-
   setup :set_mox_global
   setup :verify_on_exit!
 

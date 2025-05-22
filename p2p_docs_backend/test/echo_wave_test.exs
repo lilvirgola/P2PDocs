@@ -5,8 +5,6 @@ defmodule EchoWaveTest do
   alias P2PDocs.Network.EchoWave
   alias P2PDocs.Utils
 
-  # Hide Logger messages
-  @moduletag :capture_log
 
   # Set testing parameters
   @size 2 ** 6

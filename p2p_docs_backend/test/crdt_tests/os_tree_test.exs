@@ -5,9 +5,6 @@ defmodule OSTree.CorrectnessTest do
   alias P2PDocs.CRDT.OSTree
   alias P2PDocs.Utils
 
-  # Hide Logger messages
-  @moduletag :capture_log
-
   test "inserting values yields sorted order via kth_element/2" do
     values = [5, 1, 3, 2, 4]
 

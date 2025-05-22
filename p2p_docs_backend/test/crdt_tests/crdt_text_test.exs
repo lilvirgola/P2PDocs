@@ -5,9 +5,6 @@ defmodule CrdtTextFastTest do
 
   @peer "peer1"
 
-  # Hide Logger messages
-  @moduletag :capture_log
-
   setup do
     {:ok, state: CrdtText.new(@peer)}
   end
