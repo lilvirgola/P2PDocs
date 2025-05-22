@@ -1,6 +1,7 @@
 # Distributed Systems Project - P2PDocs
 
 **Academic Year:** [2024/2025]  
+**University of Udine: DMIF**\
 **Team members:**  
 - [Alessandro De Biasi] (@lilvirgola)  
 - [Alessandro Minisini] (@alemini18)  
