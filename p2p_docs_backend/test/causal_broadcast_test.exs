@@ -97,5 +97,82 @@ defmodule P2PDocs.Network.CausalBroadcastTest do
       {_, d_state} = CausalBroadcast.get_vc_and_d_state()
       assert d_state[:node1] == 1
     end
+
+    test "when higher vc is recived it doesn't deliver the message" do
+       vc_lower =
+        NaiveVectorClock.new(:node1)
+        |> NaiveVectorClock.increment(:node1)
+
+      msg_lower = {:message, "world", :node1, vc_lower}
+      vc_higher = NaiveVectorClock.increment(vc_lower, :node1)
+      msg_higher = {:message, "hello", :node1, vc_higher}
+      # Expect the CRDT‐manager mock to receive exactly the bare payload
+      P2PDocs.CRDT.ManagerMock
+      |> expect(:receive_msg, 2, fn delivered_payload ->
+        assert delivered_payload in ["hello", "world"]
+        :ok
+      end)
+
+      # Start the server with two nodes, so we can accept a message from :node1
+      {:ok, _pid} =
+        CausalBroadcast.start_link(
+          my_id: :node2,
+          nodes: [:node1, :node2],
+          delivery_pid: self()
+        )
+
+      # Inject the higher message
+      assert :ok == CausalBroadcast.deliver_to_causal(msg_higher)
+      # Wait for the cast & delivery
+      Process.sleep(10)
+      state1 = CausalBroadcast.get_state()
+      assert MapSet.size(state1.buffer) == 1
+      assert :ok == CausalBroadcast.deliver_to_causal(msg_lower)
+      # Wait for the cast & delivery
+      Process.sleep(10)
+      state2 = CausalBroadcast.get_state()
+      assert MapSet.size(state2.buffer) == 0
+    end
+
+    test "concurrent messages are immediatly delivered" do
+       vc_1 =
+        NaiveVectorClock.new(:node1)
+        |> NaiveVectorClock.increment(:node1)
+
+      msg_1 = {:message, "world", :node1, vc_1}
+      vc_2 =
+        NaiveVectorClock.new(:node2)
+        |> NaiveVectorClock.increment(:node2)
+      msg_2 = {:message, "hello", :node2, vc_2}
+      # Expect the CRDT‐manager mock to receive exactly the bare payload
+      P2PDocs.CRDT.ManagerMock
+      |> expect(:receive_msg, 2, fn delivered_payload ->
+        assert delivered_payload in ["hello", "world"]
+        :ok
+      end)
+
+      # Start the server with two nodes, so we can accept a message from :node1
+      {:ok, _pid} =
+        CausalBroadcast.start_link(
+          my_id: :node3,
+          nodes: [:node1, :node2, :node3],
+          delivery_pid: self()
+        )
+
+      # Inject the higher message
+      assert :ok == CausalBroadcast.deliver_to_causal(msg_1)
+      # Wait for the cast & delivery
+      Process.sleep(10)
+      state1 = CausalBroadcast.get_state()
+      assert MapSet.size(state1.buffer) == 0
+      assert :ok == CausalBroadcast.deliver_to_causal(msg_2)
+      # Wait for the cast & delivery
+      Process.sleep(10)
+      state2 = CausalBroadcast.get_state()
+      assert MapSet.size(state2.buffer) == 0
+    end
   end
+
+
+
 end
